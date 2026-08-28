@@ -80,30 +80,26 @@ fun ParticlesBg() {
 
 
 
+
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     val inf = rememberInfiniteTransition(label="reactorPRO")
-    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(20000, easing = LinearEasing)), label="rot")
-    val pulse by inf.animateFloat(1f, 1.12f, infiniteRepeatable(tween(800, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
     val glowAlpha by inf.animateFloat(0.4f, 0.9f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="glow")
     var smoothRms by remember { mutableStateOf(0f) }
     LaunchedEffect(rms){ smoothRms = (smoothRms*0.82f + rms*0.18f).coerceIn(0f, 10f) }
-
     Box(Modifier.size(280.dp), contentAlignment = Alignment.Center) {
         Canvas(Modifier.size(300.dp)) {
             val c = center
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-            val s = (pulse + smoothRms*0.015f)
-            val radius = size.minDimension/2 * s * glowAlpha
+            val radius = size.minDimension/2 * glowAlpha
             drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.5f), col.copy(alpha=0.15f), Color.Transparent), center=c, radius=radius), radius=radius, center=c)
         }
-        val sc = pulse + smoothRms*0.008f
         androidx.compose.foundation.Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
             contentDescription = "Reactor Brutal PRO",
-            modifier = Modifier.size(240.dp).scale(sc).rotate(rot * 0.15f)
+            modifier = Modifier.size(240.dp)
         )
-        Canvas(Modifier.size(90.dp).scale(pulse)) {
+        Canvas(Modifier.size(90.dp)) {
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF88FFE5)
             drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f), radius=size.minDimension/2.2f, center=center)
         }
@@ -115,6 +111,7 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
         }
     }
 }
+
 
 
 
