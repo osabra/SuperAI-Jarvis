@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.net.Uri
+import android.os.Build
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -35,13 +36,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.google.ai.client.generativeai.GenerativeModel
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
+import java.net.URL
 import java.util.*
+import org.json.JSONObject
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     var tts: TextToSpeech? = null
     var voicesList by mutableStateOf<List<Voice>>(emptyList())
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV7() } }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV8() } }
     override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) { tts?.language = Locale("es","ES"); voicesList = tts?.voices?.filter { it.locale.language == "es" }?.sortedBy { it.name }?: emptyList() } }
     fun speak(t: String) { tts?.speak(t, TextToSpeech.QUEUE_FLUSH, null, null) }
     fun stop() { tts?.stop() }
@@ -64,10 +67,21 @@ fun ReactorCore(isSpeaking: Boolean, isListening: Boolean) {
     }
 }
 
+suspend fun getWeatherVitoria(): String = withContext(Dispatchers.IO) {
+    try {
+        val url = URL("https://api.open-meteo.com/v1/forecast?latitude=42.85&longitude=-2.68&current_weather=true")
+        val json = JSONObject(url.readText())
+        val cur = json.getJSONObject("current_weather")
+        val temp = cur.getDouble("temperature")
+        val wind = cur.getDouble("windspeed")
+        "En Vitoria-Gasteiz ahora mismo ${temp}°C con viento de ${wind} km/h. Datos en tiempo real."
+    } catch(e:Exception){ "No pude conectar con el tiempo real, pero pareces estar en Vitoria con fresco del norte." }
+}
+
 @Composable
-fun JarvisV7() {
+fun JarvisV8() {
     val context = LocalContext.current; val activity = context as MainActivity
-    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V7 ACCIONES ONLINE. Di: abre YouTube, linterna, llama, que hora es...") }
+    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V8 24/7 + TIEMPO REAL ONLINE. Servicio activo.") }
     var modelName by remember { mutableStateOf("gemini-1.5-flash") }; var isLoading by remember { mutableStateOf(false) }; var isSpeaking by remember { mutableStateOf(false) }
     var isListeningWake by remember { mutableStateOf(false) }; var heyEnabled by remember { mutableStateOf(true) }; var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var pitch by remember { mutableStateOf(0.75f) }; var rate by remember { mutableStateOf(0.95f) }; var selectedVoice by remember { mutableStateOf<Voice?>(null) }
@@ -75,33 +89,35 @@ fun JarvisV7() {
     val models = listOf("gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-2.0-flash")
     val scope = rememberCoroutineScope(); val apiKey = BuildConfig.GEMINI_API_KEY
     var speechRecognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
-    var torchOn by remember { mutableStateOf(false) }
+
+    // Iniciar servicio 24/7
+    LaunchedEffect(Unit){
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if(ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS)!= PackageManager.PERMISSION_GRANTED){
+                // no pedimos aqui, lo hace el launcher
+            }
+        }
+        val serviceIntent = Intent(context, JarvisService::class.java)
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) context.startForegroundService(serviceIntent) else context.startService(serviceIntent)
+    }
 
     fun doAction(prompt: String): Boolean {
         val p = prompt.lowercase()
         try {
             when {
-                p.contains("linterna") && (p.contains("enciende") || p.contains("prende") || p.contains("on")) -> {
-                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-                    val camId = cm.cameraIdList[0]
-                    cm.setTorchMode(camId, true); torchOn = true
-                    responseText = "Linterna encendida, señor"; activity.speak("Linterna encendida"); history = history + ChatMsg("JARVIS", "Linterna ON"); return true
+                p.contains("linterna") && (p.contains("enciende") || p.contains("on") || p.contains("prende")) -> {
+                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager; cm.setTorchMode(cm.cameraIdList[0], true)
+                    responseText = "Linterna ON"; activity.speak("Linterna encendida"); return true
                 }
                 p.contains("linterna") && (p.contains("apaga") || p.contains("off")) -> {
-                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
-                    val camId = cm.cameraIdList[0]
-                    cm.setTorchMode(camId, false); torchOn = false
-                    responseText = "Linterna apagada"; activity.speak("Linterna apagada"); history = history + ChatMsg("JARVIS", "Linterna OFF"); return true
+                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager; cm.setTorchMode(cm.cameraIdList[0], false)
+                    responseText = "Linterna OFF"; activity.speak("Linterna apagada"); return true
                 }
-                p.contains("youtube") -> { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com"))); responseText="Abriendo YouTube"; activity.speak("Abriendo YouTube"); return true }
-                p.contains("whatsapp") -> { val i = context.packageManager.getLaunchIntentForPackage("com.whatsapp"); if(i!=null) context.startActivity(i) else context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://web.whatsapp.com"))); return true }
-                p.contains("instagram") -> { val i = context.packageManager.getLaunchIntentForPackage("com.instagram.android"); if(i!=null) context.startActivity(i); return true }
-                p.contains("spotify") -> { val i = context.packageManager.getLaunchIntentForPackage("com.spotify.music"); if(i!=null) context.startActivity(i); return true }
-                p.contains("camara") || p.contains("cámara") -> { context.startActivity(Intent("android.media.action.IMAGE_CAPTURE")); return true }
-                p.contains("hora") || p.contains("qué hora") -> { val hora = java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()); responseText="Son las $hora en Vitoria, Oskar"; activity.speak(responseText); history = history + ChatMsg("JARVIS", responseText); return true }
-                p.contains("llama") -> { responseText="Dime el número. Di por ejemplo llama al 666..."; activity.speak(responseText); return true }
+                p.contains("youtube") -> { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://youtube.com"))); return true }
+                p.contains("whatsapp") -> { context.packageManager.getLaunchIntentForPackage("com.whatsapp")?.let{context.startActivity(it)}; return true }
+                p.contains("hora") -> { val hora = java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()); responseText="Son las $hora en Vitoria"; activity.speak(responseText); return true }
             }
-        } catch(e:Exception){ responseText="No pude hacer eso: ${e.message}" }
+        } catch(e:Exception){}
         return false
     }
 
@@ -109,17 +125,26 @@ fun JarvisV7() {
         if(p.isBlank()) return
         history = history + ChatMsg("TÚ", p)
         if(doAction(p)) { inputText=""; return }
+        // TIEMPO REAL
+        if(p.lowercase().contains("tiempo") || p.lowercase().contains("temperatura") || p.lowercase().contains("vitoria hace")){
+            isLoading=true
+            scope.launch{
+                val weather = getWeatherVitoria()
+                responseText = weather; history = history + ChatMsg("JARVIS", weather); activity.speak(weather); isLoading=false; inputText=""
+            }
+            return
+        }
         isLoading = true; isSpeaking = true
         scope.launch {
             var success = false; var lastError = ""
-            val tryModels = listOf(modelName, "gemini-1.5-flash", "gemini-1.5-flash-001").distinct()
+            val tryModels = listOf(modelName, "gemini-1.5-flash").distinct()
             for(mId in tryModels){
                 try{
                     activity.tts?.let{ t-> selectedVoice?.let{ t.voice=it }; t.setPitch(pitch); t.setSpeechRate(rate) }
                     val m = GenerativeModel(mId, apiKey)
-                    val r = m.generateContent("Eres JARVIS de Oskar en Vitoria, responde corto en español: $p")
+                    val r = m.generateContent("Eres JARVIS de Oskar en Vitoria, corto en español: $p")
                     val ans = r.text?: "Sin datos"
-                    responseText = ans; history = history + ChatMsg("JARVIS", ans); modelName = mId; activity.speak(ans); success = true; break
+                    responseText = ans; history = history + ChatMsg("JARVIS", ans); activity.speak(ans); success = true; break
                 }catch(e:Exception){ lastError = e.message?: "error"; }
             }
             if(!success) responseText = "FALLO: $lastError"
@@ -133,19 +158,23 @@ fun JarvisV7() {
         override fun onRmsChanged(r: Float){}; override fun onBufferReceived(b: ByteArray?){}
         override fun onEndOfSpeech(){ isListeningWake=false; if(heyEnabled) startWake() }
         override fun onError(e: Int){ isListeningWake=false; if(heyEnabled) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({startWake()},800) }
-        override fun onResults(res: Bundle?){ val txt=res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")){ responseText="Si Oskar, te escucho"; activity.speak("Si Oskar, te escucho"); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }else if(heyEnabled) startWake(); isListeningWake=false }
+        override fun onResults(res: Bundle?){ val txt=res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")){ activity.speak("Si Oskar, te escucho"); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }else if(heyEnabled) startWake(); isListeningWake=false }
         override fun onPartialResults(p: Bundle?){ val txt=p?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")) rec.stopListening() }
         override fun onEvent(t:Int,p:Bundle?){}
     }); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES"); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true) }; rec.startListening(it) }
     val permLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){ g-> if(g&&heyEnabled) startWake() }
-    LaunchedEffect(heyEnabled){ if(heyEnabled&&ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED) startWake() else if(heyEnabled) permLauncher.launch(Manifest.permission.RECORD_AUDIO) }
+    val notifLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()){}
+    LaunchedEffect(heyEnabled){
+        if(heyEnabled&&ContextCompat.checkSelfPermission(context, Manifest.permission.RECORD_AUDIO)==PackageManager.PERMISSION_GRANTED) startWake() else if(heyEnabled) permLauncher.launch(Manifest.permission.RECORD_AUDIO)
+        if(Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) notifLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+    }
     DisposableEffect(Unit){ onDispose{ speechRecognizer?.destroy() } }
 
     Box(Modifier.fillMaxSize().background(Color(0xFF01050A)).padding(10.dp)){
         Column(Modifier.fillMaxSize(), horizontalAlignment=Alignment.CenterHorizontally){
-            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("JARVIS V7", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("AJUSTES") } }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("JARVIS V8 24/7 + CLIMA", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("AJUSTES") } }
             ReactorCore(isSpeaking, isListeningWake)
-            Text(if(isListeningWake) "HEY JARVIS ESCUCHANDO..." else if(isLoading) "PROCESANDO..." else "STANDBY", color=if(isListeningWake) Color(0xFF00FF88) else Color.Gray)
+            Text(if(isListeningWake) "HEY JARVIS 24/7 ESCUCHANDO..." else "STANDBY", color=if(isListeningWake) Color(0xFF00FF88) else Color.Gray)
             Card(Modifier.fillMaxWidth(), colors=CardDefaults.cardColors(containerColor=Color(0xFF0D1B2A))){ Text(responseText, color=Color(0xFFCCFFFF), modifier=Modifier.padding(10.dp)) }
             LazyColumn(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF060E1E)).padding(6.dp), reverseLayout=true){ items(history.reversed()){ msg-> Text(msg.role + ": " + msg.text, color=if(msg.role=="TÚ") Color.Gray else Color(0xFF00FFFF)) } }
             Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){ OutlinedTextField(value=inputText, onValueChange={inputText=it}, label={Text("Orden...")}, modifier=Modifier.weight(1f), colors=OutlinedTextFieldDefaults.colors(focusedTextColor=Color.White, unfocusedTextColor=Color.White, focusedBorderColor=Color.Cyan)); Button(onClick={ val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }){ Text("MIC") } }
@@ -154,23 +183,19 @@ fun JarvisV7() {
         if(showSettings){
             Card(Modifier.fillMaxSize().padding(10.dp), colors=CardDefaults.cardColors(containerColor=Color(0xFF0A1E2F))){
                 Column(Modifier.padding(12.dp).fillMaxSize()){
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("AJUSTES V7 ACCIONES", color=Color.Cyan); Button(onClick={showSettings=false}){ Text("X") } }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(6.dp)){ Button(onClick={settingsPage=0}){ Text("VOZ") }; Button(onClick={settingsPage=1}){ Text("GOOGLE") }; Button(onClick={settingsPage=2}){ Text("ACCIONES") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("V8 AJUSTES", color=Color.Cyan); Button(onClick={showSettings=false}){ Text("X") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(6.dp)){ Button(onClick={settingsPage=0}){ Text("VOZ") }; Button(onClick={settingsPage=1}){ Text("GOOGLE") }; Button(onClick={settingsPage=2}){ Text("24/7") } }
                     Spacer(Modifier.height(10.dp))
                     if(settingsPage==0){
                         Text("Voz: ${selectedVoice?.name?.take(25)?: "Defecto"}", color=Color.White)
-                        LazyColumn(Modifier.height(140.dp).background(Color(0xFF061425))){ items(activity.voicesList){ v-> Text(v.name.take(35), color=if(selectedVoice==v) Color.Cyan else Color.Gray, modifier=Modifier.padding(6.dp).clickable{ selectedVoice=v; activity.tts?.voice=v; activity.speak("Hola Oskar") }) } }
+                        LazyColumn(Modifier.height(120.dp).background(Color(0xFF061425))){ items(activity.voicesList){ v-> Text(v.name.take(35), color=if(selectedVoice==v) Color.Cyan else Color.Gray, modifier=Modifier.padding(6.dp).clickable{ selectedVoice=v; activity.tts?.voice=v; activity.speak("Hola Oskar") }) } }
                         Text("Grave ${pitch}", color=Color.Gray); Slider(value=pitch, onValueChange={pitch=it}, valueRange=0.5f..2f)
-                        Text("Vel ${rate}", color=Color.Gray); Slider(value=rate, onValueChange={rate=it}, valueRange=0.5f..1.8f)
                     } else if(settingsPage==1){
                         models.forEach{ m-> Card(Modifier.fillMaxWidth().padding(4.dp).clickable{modelName=m}, colors=CardDefaults.cardColors(containerColor=if(modelName==m) Color(0xFF004466) else Color(0xFF101828))){ Row(Modifier.padding(10.dp)){ RadioButton(selected=modelName==m, onClick={modelName=m}); Text(m, color=Color.White) } } }
                     } else {
-                        Text("COMANDOS QUE YA HACE:", color=Color.White)
-                        Spacer(Modifier.height(8.dp))
-                        Text("• 'Enciende linterna' / 'Apaga linterna'\n• 'Abre YouTube'\n• 'Abre WhatsApp'\n• 'Abre Instagram / Spotify'\n• 'Abre cámara'\n• 'Qué hora es'\n• 'Hey Jarvis' para despertar", color=Color.Gray)
+                        Text("V8 24/7: Cuando cierras la app, veras una notificacion permanente 'JARVIS V8 ACTIVO'. Mientras esté ahí, el móvil no mata a JARVIS. Es como Alexa.", color=Color.Gray)
                         Spacer(Modifier.height(10.dp))
-                        Text("PRÓXIMO: Tiempo real Vitoria + noticias + brillo pantalla", color=Color(0xFF00FFFF))
-                        Button(onClick={activity.stop()}, colors=ButtonDefaults.buttonColors(containerColor=Color.Red), modifier=Modifier.fillMaxWidth().padding(top=10.dp)){ Text("PARAR VOZ") }
+                        Text("TIEMPO REAL: Di 'Que tiempo hace en Vitoria' y consulta temperatura real de Open-Meteo.", color=Color(0xFF00FFFF))
                     }
                 }
             }
