@@ -77,44 +77,20 @@ fun ParticlesBg() {
 }
 
 
-
-
-
-
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="reactorPRO")
-    val glowAlpha by inf.animateFloat(0.4f, 0.9f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="glow")
-    var smoothRms by remember { mutableStateOf(0f) }
-    LaunchedEffect(rms){ smoothRms = (smoothRms*0.82f + rms*0.18f).coerceIn(0f, 10f) }
-    Box(Modifier.size(280.dp), contentAlignment = Alignment.Center) {
+    Box(Modifier.size(260.dp), contentAlignment = Alignment.Center) {
+        val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
         Canvas(Modifier.size(300.dp)) {
-            val c = center
-            val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-            val radius = size.minDimension/2 * glowAlpha
-            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.5f), col.copy(alpha=0.15f), Color.Transparent), center=c, radius=radius), radius=radius, center=c)
+            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.3f), Color.Transparent), center=center, radius=size.minDimension/2), radius=size.minDimension/2, center=center)
         }
         androidx.compose.foundation.Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
-            contentDescription = "Reactor Brutal PRO",
+            contentDescription = null,
             modifier = Modifier.size(240.dp)
         )
-        Canvas(Modifier.size(90.dp)) {
-            val col = if(isListening) Color(0xFF00FF88) else Color(0xFF88FFE5)
-            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f), radius=size.minDimension/2.2f, center=center)
-        }
-        if(isListening){
-            Canvas(Modifier.size(260.dp)){
-                val col = Color(0xFF00FF88)
-                drawCircle(col.copy(alpha=0.15f + smoothRms*0.06f), radius=size.minDimension/2, center=center, style=Stroke(width = 2.5f + smoothRms*0.8f))
-            }
-        }
     }
 }
-
-
-
-
 
 
 suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
@@ -134,7 +110,7 @@ suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
 fun JarvisV11() {
     val context = LocalContext.current; val activity = context as MainActivity
     var input by remember { mutableStateOf("") }
-    var output by remember { mutableStateOf("STARK OS V11.8 PRO REAL - REACTOR 4K BRUTAL FIX GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
+    var output by remember { mutableStateOf("STARK OS V11.12 PRO VERDE GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
     var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var listening by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
@@ -152,7 +128,7 @@ fun JarvisV11() {
     fun handleControl(p: String): Boolean {
         val lower = p.lowercase()
         try{
-            if(false && lower.contains("alarma")) {
+            if(lower.contains("alarma")) {
                 val regex = Regex("(\\d{1,2})[:h](\\d{2})?")
                 val m = regex.find(lower)
                 val h = m?.groupValues?.get(1)?.toIntOrNull() ?: 7
@@ -248,7 +224,7 @@ fun JarvisV11() {
         ParticlesBg()
         Column(Modifier.fillMaxSize().padding(12.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF001E38).copy(alpha=0.9f)).border(1.dp, Color(0xFF00FFFF).copy(alpha=0.4f), RoundedCornerShape(12.dp)).padding(12.dp), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){
-                Text("STARK OS V11.8 PRO REAL - REACTOR 4K BRUTAL FIX GOD", color=Color(0xFF00FFFF), fontSize=12.sp, fontFamily=FontFamily.Monospace, fontWeight=FontWeight.Bold)
+                Text("STARK OS V11.12 PRO VERDE GOD", color=Color(0xFF00FFFF), fontSize=12.sp, fontFamily=FontFamily.Monospace, fontWeight=FontWeight.Bold)
                 Text(clock, color=Color(0xFF00FF88), fontFamily=FontFamily.Monospace)
                 Text(if(listening) "● HEY" else if(loading) "● IA" else "○", color=if(listening) Color(0xFF00FF88) else if(loading) Color(0xFFFFAA00) else Color.Gray, fontFamily=FontFamily.Monospace)
             }
