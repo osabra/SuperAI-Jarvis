@@ -82,7 +82,7 @@ class MainActivity : ComponentActivity() {
                             isLoading = true
                             scope.launch {
                                 try {
-                                    val model = GenerativeModel("gemini-2.0-flash", apiKey)
+                                    val model = GenerativeModel("gemini-3.6-flash", apiKey)
                                     val result = model.generateContent(prompt)
                                     responseText = result.text ?: "Sin respuesta de Gemini"
                                 } catch (e: Exception) {
