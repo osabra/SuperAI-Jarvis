@@ -16,6 +16,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -69,7 +70,7 @@ fun ReactorCore(isSpeaking: Boolean, isListening: Boolean, isWake: Boolean) {
 @Composable
 fun JarvisV6MenuApp() {
     val context = LocalContext.current; val activity = context as MainActivity
-    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V6 MENU ONLINE. Pulsa ☰ arriba para ajustes, Oskar.") }
+    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V6.1 MENU FIX ONLINE. Pulsa ☰ arriba para ajustes.") }
     var modelName by remember { mutableStateOf("gemini-3.6-flash") }; var isLoading by remember { mutableStateOf(false) }; var isSpeaking by remember { mutableStateOf(false) }
     var isListeningWake by remember { mutableStateOf(false) }; var heyEnabled by remember { mutableStateOf(true) }; var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var pitch by remember { mutableStateOf(0.75f) }; var rate by remember { mutableStateOf(0.95f) }; var selectedVoice by remember { mutableStateOf<Voice?>(null) }
@@ -97,7 +98,7 @@ fun JarvisV6MenuApp() {
             override fun onError(e: Int) { isListeningWake = false; if (heyEnabled) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({ startWakeListening() }, 800) }
             override fun onResults(res: Bundle?) {
                 val txt = res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase() ?: ""
-                if (txt.contains("jarvis") || txt.contains("hey") || txt.contains("oye")) {
+                if (txt.contains("jarvis")) {
                     responseText = "Sí, Oskar. Te escucho."; activity.speak("Sí, Oskar. Te escucho.")
                     val intent = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply { putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }
                     speechLauncher.launch(intent)
@@ -115,7 +116,7 @@ fun JarvisV6MenuApp() {
 
     MaterialTheme {
         Scaffold(topBar = {
-            TopAppBar(title = { Text("JARVIS V6", color = Color.Cyan) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF01050A)), navigationIcon = { IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.Cyan) } }, actions = { IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.Settings, contentDescription = "Ajustes", tint = Color.Gray) } })
+            TopAppBar(title = { Text("JARVIS V6.1", color = Color.Cyan) }, colors = TopAppBarDefaults.topAppBarColors(containerColor = Color(0xFF01050A)), navigationIcon = { IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.Menu, contentDescription = "Menu", tint = Color.Cyan) } }, actions = { IconButton(onClick = { showMenu = true }) { Icon(Icons.Default.Settings, contentDescription = "Ajustes", tint = Color.Gray) } })
         }, containerColor = Color(0xFF01050A)) { pad ->
             Column(Modifier.fillMaxSize().padding(pad).background(Color(0xFF01050A)).padding(10.dp), horizontalAlignment = Alignment.CenterHorizontally) {
                 ReactorCore(isSpeaking, isListeningWake, heyEnabled)
@@ -134,7 +135,7 @@ fun JarvisV6MenuApp() {
         if (showMenu) {
             ModalBottomSheet(onDismissRequest = { showMenu = false }, containerColor = Color(0xFF0A1E2F)) {
                 Column(Modifier.fillMaxWidth().padding(16.dp)) {
-                    Text("AJUSTES JARVIS V6", color = Color.Cyan, style = MaterialTheme.typography.titleMedium)
+                    Text("AJUSTES JARVIS V6.1", color = Color.Cyan, style = MaterialTheme.typography.titleMedium)
                     Spacer(Modifier.height(10.dp))
                     TabRow(selectedTabIndex = selectedTab, containerColor = Color(0xFF0A1E2F), contentColor = Color.Cyan) {
                         Tab(selected = selectedTab==0, onClick = { selectedTab=0 }, text = { Text("🎙️ VOZ") })
@@ -144,38 +145,32 @@ fun JarvisV6MenuApp() {
                     Spacer(Modifier.height(12.dp))
                     when (selectedTab) {
                         0 -> {
-                            Text("Voz actual: ${selectedVoice?.name?.take(30) ?: "Defecto"}", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(6.dp))
+                            Text("Voz: ${selectedVoice?.name?.take(30) ?: "Defecto"}", color = Color.White, style = MaterialTheme.typography.bodySmall)
                             LazyColumn(Modifier.height(120.dp).background(Color(0xFF061425)).fillMaxWidth()) {
                                 items(activity.voicesList) { v -> TextButton(onClick = { selectedVoice = v; activity.tts?.voice = v; activity.speak("Hola Oskar, soy ${v.name}") }) { Text(v.name.take(40), color = if (selectedVoice==v) Color.Cyan else Color.Gray, style = MaterialTheme.typography.labelSmall) } }
                             }
-                            Text("Gravedad: ${String.format("%.2f", pitch)} (0.70 = Jarvis)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
+                            Text("Gravedad: ${String.format("%.2f", pitch)} (0.70=Jarvis)", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                             Slider(value = pitch, onValueChange = { pitch = it; activity.tts?.setPitch(it) }, valueRange = 0.5f..2f)
                             Text("Velocidad: ${String.format("%.2f", rate)}", color = Color.Gray, style = MaterialTheme.typography.labelSmall)
                             Slider(value = rate, onValueChange = { rate = it; activity.tts?.setSpeechRate(it) }, valueRange = 0.5f..1.8f)
-                            Button(onClick = { activity.speak("Hola Oskar, reactor ARC al cien por cien, listo para tus órdenes") }, modifier = Modifier.fillMaxWidth()) { Text("🔊 PROBAR VOZ") }
+                            Button(onClick = { activity.speak("Hola Oskar, reactor ARC al cien por cien") }, modifier = Modifier.fillMaxWidth()) { Text("🔊 PROBAR VOZ") }
                         }
                         1 -> {
-                            Text("Modo de Inteligencia Google Gemini", color = Color.White, style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(8.dp))
                             models.forEach { (id, desc) ->
-                                Card(Modifier.fillMaxWidth().padding(vertical=4.dp), colors = CardDefaults.cardColors(containerColor = if (modelName==id) Color(0xFF004466) else Color(0xFF101828)), onClick = { modelName = id }) {
-                                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween) {
+                                Card(Modifier.fillMaxWidth().padding(vertical=4.dp).clickable { modelName = id }, colors = CardDefaults.cardColors(containerColor = if (modelName==id) Color(0xFF004466) else Color(0xFF101828))) {
+                                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween, modifier = Modifier.fillMaxWidth()) {
                                         Column { Text(id, color = Color.White, style = MaterialTheme.typography.labelSmall); Text(desc, color = Color.Gray, style = MaterialTheme.typography.labelSmall) }
                                         RadioButton(selected = modelName==id, onClick = { modelName = id })
                                     }
                                 }
                             }
-                            Text("• Flash = Rápido y barato\n• 2.5 Flash = Equilibrio\n• 3.6 Flash = Máxima calidad (puede no estar aún en tu clave)", color = Color.Gray, style = MaterialTheme.typography.labelSmall, modifier = Modifier.padding(top=8.dp))
                         }
                         2 -> {
                             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                                 Text("Activar 'Hey Jarvis'", color = Color.White); Switch(checked = heyEnabled, onCheckedChange = { heyEnabled = it })
                             }
-                            Spacer(Modifier.height(8.dp))
-                            Text("Cuando está activo, el núcleo se pone verde y escucha en segundo plano. Di 'Hey Jarvis' o 'Oye Jarvis' para despertarme sin tocar el móvil. Consume más batería.", color = Color.Gray, style = MaterialTheme.typography.bodySmall)
-                            Spacer(Modifier.height(12.dp))
-                            Button(onClick = { activity.stop(); isSpeaking = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red), modifier = Modifier.fillMaxWidth()) { Text("■ PARAR VOZ AHORA") }
+                            Text("Escucha en segundo plano. Di 'Hey Jarvis' para despertarme.", color = Color.Gray, style = MaterialTheme.typography.bodySmall, modifier = Modifier.padding(top=8.dp))
+                            Button(onClick = { activity.stop(); isSpeaking = false }, colors = ButtonDefaults.buttonColors(containerColor = Color.Red), modifier = Modifier.fillMaxWidth().padding(top=12.dp)) { Text("■ PARAR VOZ") }
                         }
                     }
                     Spacer(Modifier.height(30.dp))
