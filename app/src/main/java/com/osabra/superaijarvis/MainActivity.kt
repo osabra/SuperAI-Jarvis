@@ -81,7 +81,6 @@ fun ParticlesBg() {
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     val inf = rememberInfiniteTransition(label="reactorGOD")
     val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(3000, easing = LinearEasing)), label="r")
-    val rot2 by inf.animateFloat(360f, 0f, infiniteRepeatable(tween(5000, easing = LinearEasing)), label="r2")
     val pulse by inf.animateFloat(0.9f, 1.15f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="p")
     val plasma by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label="plasma")
     var smoothRms by remember { mutableStateOf(0f) }
