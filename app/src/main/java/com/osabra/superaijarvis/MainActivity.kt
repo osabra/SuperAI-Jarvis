@@ -22,7 +22,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,7 +35,9 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.res.painterResource
+import androidx.compose.foundation.Image
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -79,20 +80,71 @@ fun ParticlesBg() {
 }
 
 
+
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    Box(Modifier.size(260.dp), contentAlignment = Alignment.Center) {
-        val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-        Canvas(Modifier.size(300.dp)) {
-            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.3f), Color.Transparent), center=center, radius=size.minDimension/2), radius=size.minDimension/2, center=center)
+    val infinite = rememberInfiniteTransition(label = "reactor3D")
+    val rotation by infinite.animateFloat(
+        initialValue = 0f, targetValue = 360f,
+        animationSpec = infiniteRepeatable(tween(20000, easing = LinearEasing), RepeatMode.Restart),
+        label = "rotation"
+    )
+    val pulse by infinite.animateFloat(
+        initialValue = 0.92f, targetValue = 1.08f,
+        animationSpec = infiniteRepeatable(tween(1200, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "pulse"
+    )
+    val glow by infinite.animateFloat(
+        initialValue = 0.4f, targetValue = 0.85f,
+        animationSpec = infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label = "glow"
+    )
+    var smoothRms by remember { mutableStateOf(0f) }
+    LaunchedEffect(rms){ smoothRms = (smoothRms*0.8f + rms*0.2f).coerceIn(0f, 8f) }
+
+    Box(Modifier.size(300.dp), contentAlignment = Alignment.Center) {
+        // Glow externo brutal que respira
+        Canvas(Modifier.size(320.dp).graphicsLayer{
+            scaleX = pulse + smoothRms*0.02f
+            scaleY = pulse + smoothRms*0.02f
+            alpha = glow
+        }) {
+            val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
+            drawCircle(Brush.radialGradient(listOf(col.copy(0.5f), col.copy(0.1f), Color.Transparent), center=center, radius=size.minDimension/2), radius=size.minDimension/2, center=center)
         }
+        // Reactor 3D REAL - con rotación y escala
         Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
-            contentDescription = null,
-            modifier = Modifier.size(240.dp)
+            contentDescription = "Reactor 3D Brutal",
+            modifier = Modifier
+                .size(250.dp)
+                .graphicsLayer{
+                    rotationZ = rotation * 0.12f // rotación lenta brutal
+                    rotationX = 8f // inclinación 3D
+                    rotationY = -5f
+                    scaleX = pulse + smoothRms*0.015f
+                    scaleY = pulse + smoothRms*0.015f
+                    shadowElevation = 30f
+                    cameraDistance = 12f * density
+                }
         )
+        // Núcleo interno que pulsa
+        Canvas(Modifier.size(80.dp).graphicsLayer{
+            scaleX = pulse
+            scaleY = pulse
+        }) {
+            val col = if(isListening) Color(0xFF00FF88) else Color(0xFFAAFFFF)
+            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=40.dp.toPx()), radius=40.dp.toPx(), center=center)
+        }
+        if(isListening){
+            Canvas(Modifier.size(280.dp)){
+                val col = Color(0xFF00FF88)
+                drawCircle(col.copy(alpha=0.2f + smoothRms*0.05f), radius=size.minDimension/2, center=center, style=Stroke(width=2f + smoothRms))
+            }
+        }
     }
 }
+
 
 
 suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
