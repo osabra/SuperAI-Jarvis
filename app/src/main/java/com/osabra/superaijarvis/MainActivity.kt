@@ -78,24 +78,78 @@ fun ParticlesBg() {
 
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="r")
-    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(if(isLoading) 600 else 3000, easing=LinearEasing)), label="r1")
-    val rot2 by inf.animateFloat(360f, 0f, infiniteRepeatable(tween(if(isLoading) 900 else 5000, easing=LinearEasing)), label="r2")
-    val basePulse by inf.animateFloat(0.9f, 1.15f, infiniteRepeatable(tween(700), RepeatMode.Reverse), label="p")
-    val pulse = basePulse + (rms/10f).coerceIn(0f,0.6f)
-    Canvas(Modifier.size((200 + rms*6).dp)) {
-        val c = center; val base = size.minDimension/2.2f
-        val col = when { isListening -> Color(0xFF00FF88); isLoading -> Color(0xFFFFAA00); else -> Color(0xFF00E5FF) }
-        // ondas de voz
-        if(isListening && rms>1f){ for(i in 1..3) drawCircle(col.copy(alpha=0.12f/i), radius=base*pulse*1.2f + i*12f + rms*2f, center=c, style=Stroke(1.5f)) }
-        drawCircle(col.copy(alpha=0.25f), radius=base*pulse*1.25f, center=c)
+    val inf = rememberInfiniteTransition(label="reactor")
+    // Solo anima si esta activo, si no 0
+    val targetRot = if (isListening || isLoading) 360f else 0f
+    val rot by inf.animateFloat(
+        initialValue = 0f,
+        targetValue = targetRot,
+        animationSpec = infiniteRepeatable(
+            tween(if(isLoading) 1200 else 4000, easing = LinearEasing),
+            RepeatMode.Restart
+        ), label="r1"
+    )
+    val pulse by inf.animateFloat(
+        0.95f, if(isListening) 1.25f else 1.05f,
+        infiniteRepeatable(tween(if(isListening) 400 else 2000, easing = FastOutSlowInEasing), RepeatMode.Reverse),
+        label="p"
+    )
+    val activePulse = pulse + (if(isListening) (rms/12f).coerceIn(0f,0.4f) else 0f)
+
+    Canvas(Modifier.size((190 + (if(isListening) rms*4 else 0f)).dp)) {
+        val c = center
+        val base = size.minDimension/2.2f
+        val col = when {
+            isListening -> Color(0xFF00FF88)
+            isLoading -> Color(0xFFFFAA00)
+            else -> Color(0xFF00E5FF).copy(alpha=0.7f)
+        }
+
+        // Brillo exterior solo si activo
+        if(isListening || isLoading){
+            drawCircle(col.copy(alpha=0.18f), radius=base*activePulse*1.3f, center=c)
+            // ondas
+            if(isListening && rms>1f){
+                for(i in 1..2) drawCircle(col.copy(alpha=0.10f/i), radius=base*activePulse*1.15f + i*16f + rms*2f, center=c, style=Stroke(1.2f))
+            }
+        }
+
+        // Anillo principal fijo
         drawCircle(Color(0xFF0A2A4A), radius=base, center=c, style=Stroke(10f))
         drawCircle(col, radius=base, center=c, style=Stroke(2.5f))
-        rotate(rot) { for(i in 0..3){ rotate(i*90f){ drawArc(col, 15f, 40f, false, topLeft=Offset(c.x-base*0.7f, c.y-base*0.7f), size=Size(base*1.4f, base*1.4f), style=Stroke(3f)) } } }
-        rotate(rot2) { drawCircle(Color.White.copy(alpha=0.15f), radius=base*0.6f, center=c, style=Stroke(1f)) }
+
+        // Segmentos giratorios SOLO si esta activo
+        if(isListening || isLoading){
+            rotate(rot) {
+                for(i in 0..3){
+                    rotate(i*90f){
+                        drawArc(col, 15f, 35f, false,
+                            topLeft=Offset(c.x-base*0.7f, c.y-base*0.7f),
+                            size=Size(base*1.4f, base*1.4f),
+                            style=Stroke(3f)
+                        )
+                    }
+                }
+            }
+        } else {
+            // En reposo, arcos fijos sin rotar
+            for(i in 0..3){
+                rotate(i*90f){
+                    drawArc(col.copy(alpha=0.4f), 15f, 25f, false,
+                        topLeft=Offset(c.x-base*0.7f, c.y-base*0.7f),
+                        size=Size(base*1.4f, base*1.4f),
+                        style=Stroke(2f)
+                    )
+                }
+            }
+        }
+
+        // Nucleo interior siempre
         drawCircle(Color(0xFF001E38), radius=base*0.45f, center=c)
-        drawCircle(Color.White, radius=base*0.2f*pulse, center=c)
-        drawCircle(col.copy(alpha=0.6f), radius=base*0.2f*pulse, center=c, style=Stroke(2f))
+        drawCircle(Color.White, radius=base*0.18f*activePulse, center=c)
+        if(isListening || isLoading){
+            drawCircle(col.copy(alpha=0.6f), radius=base*0.18f*activePulse, center=c, style=Stroke(2f))
+        }
     }
 }
 
