@@ -86,7 +86,8 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     var smoothRms by remember { mutableStateOf(0f) }
     LaunchedEffect(rms){ smoothRms = (smoothRms*0.8f + rms*0.2f).coerceIn(0f,8f) }
     Canvas(Modifier.size(240.dp)) {
-        val c = center; val base = size.minDimension/2.2f
+        val c = center
+        val base = size.minDimension/2.2f
         val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
         val p = pulse + smoothRms*0.02f
         drawCircle(Color.Black.copy(alpha=0.7f), radius=base*1.4f, center=Offset(c.x+14f, c.y+14f))
@@ -125,7 +126,7 @@ suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
 fun JarvisV11() {
     val context = LocalContext.current; val activity = context as MainActivity
     var input by remember { mutableStateOf("") }
-    var output by remember { mutableStateOf("STARK OS V11 GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
+    var output by remember { mutableStateOf("STARK OS V11.7 BRUTAL FIX GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
     var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var listening by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
@@ -143,7 +144,7 @@ fun JarvisV11() {
     fun handleControl(p: String): Boolean {
         val lower = p.lowercase()
         try{
-            if(false && lower.contains("alarma")) // alarma desactivada por usuario {
+            if(false && lower.contains("alarma")) {
                 val regex = Regex("(\\d{1,2})[:h](\\d{2})?")
                 val m = regex.find(lower)
                 val h = m?.groupValues?.get(1)?.toIntOrNull() ?: 7
@@ -239,7 +240,7 @@ fun JarvisV11() {
         ParticlesBg()
         Column(Modifier.fillMaxSize().padding(12.dp)){
             Row(Modifier.fillMaxWidth().clip(RoundedCornerShape(12.dp)).background(Color(0xFF001E38).copy(alpha=0.9f)).border(1.dp, Color(0xFF00FFFF).copy(alpha=0.4f), RoundedCornerShape(12.dp)).padding(12.dp), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){
-                Text("STARK OS V11 GOD", color=Color(0xFF00FFFF), fontSize=12.sp, fontFamily=FontFamily.Monospace, fontWeight=FontWeight.Bold)
+                Text("STARK OS V11.7 BRUTAL FIX GOD", color=Color(0xFF00FFFF), fontSize=12.sp, fontFamily=FontFamily.Monospace, fontWeight=FontWeight.Bold)
                 Text(clock, color=Color(0xFF00FF88), fontFamily=FontFamily.Monospace)
                 Text(if(listening) "● HEY" else if(loading) "● IA" else "○", color=if(listening) Color(0xFF00FF88) else if(loading) Color(0xFFFFAA00) else Color.Gray, fontFamily=FontFamily.Monospace)
             }
