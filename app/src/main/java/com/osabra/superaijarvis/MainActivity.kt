@@ -1,8 +1,11 @@
 package com.osabra.superaijarvis
 
 import android.Manifest
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
+import android.net.Uri
 import android.os.Bundle
 import android.speech.RecognitionListener
 import android.speech.RecognizerIntent
@@ -38,8 +41,8 @@ import java.util.*
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     var tts: TextToSpeech? = null
     var voicesList by mutableStateOf<List<Voice>>(emptyList())
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV64() } }
-    override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) { tts?.language = Locale("es","ES"); voicesList = tts?.voices?.filter { it.locale.language == "es" }?.sortedBy { it.name } ?: emptyList() } }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV7() } }
+    override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) { tts?.language = Locale("es","ES"); voicesList = tts?.voices?.filter { it.locale.language == "es" }?.sortedBy { it.name }?: emptyList() } }
     fun speak(t: String) { tts?.speak(t, TextToSpeech.QUEUE_FLUSH, null, null) }
     fun stop() { tts?.stop() }
     override fun onDestroy() { tts?.stop(); tts?.shutdown(); super.onDestroy() }
@@ -62,9 +65,9 @@ fun ReactorCore(isSpeaking: Boolean, isListening: Boolean) {
 }
 
 @Composable
-fun JarvisV64() {
+fun JarvisV7() {
     val context = LocalContext.current; val activity = context as MainActivity
-    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V6.4 FIX STYLE OK. Usa 1.5-flash") }
+    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V7 ACCIONES ONLINE. Di: abre YouTube, linterna, llama, que hora es...") }
     var modelName by remember { mutableStateOf("gemini-1.5-flash") }; var isLoading by remember { mutableStateOf(false) }; var isSpeaking by remember { mutableStateOf(false) }
     var isListeningWake by remember { mutableStateOf(false) }; var heyEnabled by remember { mutableStateOf(true) }; var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var pitch by remember { mutableStateOf(0.75f) }; var rate by remember { mutableStateOf(0.95f) }; var selectedVoice by remember { mutableStateOf<Voice?>(null) }
@@ -72,10 +75,40 @@ fun JarvisV64() {
     val models = listOf("gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-2.0-flash")
     val scope = rememberCoroutineScope(); val apiKey = BuildConfig.GEMINI_API_KEY
     var speechRecognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
+    var torchOn by remember { mutableStateOf(false) }
+
+    fun doAction(prompt: String): Boolean {
+        val p = prompt.lowercase()
+        try {
+            when {
+                p.contains("linterna") && (p.contains("enciende") || p.contains("prende") || p.contains("on")) -> {
+                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                    val camId = cm.cameraIdList[0]
+                    cm.setTorchMode(camId, true); torchOn = true
+                    responseText = "Linterna encendida, señor"; activity.speak("Linterna encendida"); history = history + ChatMsg("JARVIS", "Linterna ON"); return true
+                }
+                p.contains("linterna") && (p.contains("apaga") || p.contains("off")) -> {
+                    val cm = context.getSystemService(Context.CAMERA_SERVICE) as CameraManager
+                    val camId = cm.cameraIdList[0]
+                    cm.setTorchMode(camId, false); torchOn = false
+                    responseText = "Linterna apagada"; activity.speak("Linterna apagada"); history = history + ChatMsg("JARVIS", "Linterna OFF"); return true
+                }
+                p.contains("youtube") -> { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://www.youtube.com"))); responseText="Abriendo YouTube"; activity.speak("Abriendo YouTube"); return true }
+                p.contains("whatsapp") -> { val i = context.packageManager.getLaunchIntentForPackage("com.whatsapp"); if(i!=null) context.startActivity(i) else context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse("https://web.whatsapp.com"))); return true }
+                p.contains("instagram") -> { val i = context.packageManager.getLaunchIntentForPackage("com.instagram.android"); if(i!=null) context.startActivity(i); return true }
+                p.contains("spotify") -> { val i = context.packageManager.getLaunchIntentForPackage("com.spotify.music"); if(i!=null) context.startActivity(i); return true }
+                p.contains("camara") || p.contains("cámara") -> { context.startActivity(Intent("android.media.action.IMAGE_CAPTURE")); return true }
+                p.contains("hora") || p.contains("qué hora") -> { val hora = java.text.SimpleDateFormat("HH:mm", Locale.getDefault()).format(Date()); responseText="Son las $hora en Vitoria, Oskar"; activity.speak(responseText); history = history + ChatMsg("JARVIS", responseText); return true }
+                p.contains("llama") -> { responseText="Dime el número. Di por ejemplo llama al 666..."; activity.speak(responseText); return true }
+            }
+        } catch(e:Exception){ responseText="No pude hacer eso: ${e.message}" }
+        return false
+    }
 
     fun sendAuto(p: String) {
         if(p.isBlank()) return
         history = history + ChatMsg("TÚ", p)
+        if(doAction(p)) { inputText=""; return }
         isLoading = true; isSpeaking = true
         scope.launch {
             var success = false; var lastError = ""
@@ -84,10 +117,10 @@ fun JarvisV64() {
                 try{
                     activity.tts?.let{ t-> selectedVoice?.let{ t.voice=it }; t.setPitch(pitch); t.setSpeechRate(rate) }
                     val m = GenerativeModel(mId, apiKey)
-                    val r = m.generateContent("Eres JARVIS de Oskar, responde corto en español: $p")
-                    val ans = r.text ?: "Sin datos"
+                    val r = m.generateContent("Eres JARVIS de Oskar en Vitoria, responde corto en español: $p")
+                    val ans = r.text?: "Sin datos"
                     responseText = ans; history = history + ChatMsg("JARVIS", ans); modelName = mId; activity.speak(ans); success = true; break
-                }catch(e:Exception){ lastError = e.message ?: "error"; }
+                }catch(e:Exception){ lastError = e.message?: "error"; }
             }
             if(!success) responseText = "FALLO: $lastError"
             isLoading = false; inputText = ""
@@ -110,7 +143,7 @@ fun JarvisV64() {
 
     Box(Modifier.fillMaxSize().background(Color(0xFF01050A)).padding(10.dp)){
         Column(Modifier.fillMaxSize(), horizontalAlignment=Alignment.CenterHorizontally){
-            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("JARVIS V6.4", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("AJUSTES") } }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("JARVIS V7", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("AJUSTES") } }
             ReactorCore(isSpeaking, isListeningWake)
             Text(if(isListeningWake) "HEY JARVIS ESCUCHANDO..." else if(isLoading) "PROCESANDO..." else "STANDBY", color=if(isListeningWake) Color(0xFF00FF88) else Color.Gray)
             Card(Modifier.fillMaxWidth(), colors=CardDefaults.cardColors(containerColor=Color(0xFF0D1B2A))){ Text(responseText, color=Color(0xFFCCFFFF), modifier=Modifier.padding(10.dp)) }
@@ -121,20 +154,22 @@ fun JarvisV64() {
         if(showSettings){
             Card(Modifier.fillMaxSize().padding(10.dp), colors=CardDefaults.cardColors(containerColor=Color(0xFF0A1E2F))){
                 Column(Modifier.padding(12.dp).fillMaxSize()){
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("AJUSTES V6.4", color=Color.Cyan); Button(onClick={showSettings=false}){ Text("X") } }
-                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(6.dp)){ Button(onClick={settingsPage=0}){ Text("VOZ") }; Button(onClick={settingsPage=1}){ Text("GOOGLE") }; Button(onClick={settingsPage=2}){ Text("HEY") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("AJUSTES V7 ACCIONES", color=Color.Cyan); Button(onClick={showSettings=false}){ Text("X") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(6.dp)){ Button(onClick={settingsPage=0}){ Text("VOZ") }; Button(onClick={settingsPage=1}){ Text("GOOGLE") }; Button(onClick={settingsPage=2}){ Text("ACCIONES") } }
                     Spacer(Modifier.height(10.dp))
                     if(settingsPage==0){
                         Text("Voz: ${selectedVoice?.name?.take(25)?: "Defecto"}", color=Color.White)
                         LazyColumn(Modifier.height(140.dp).background(Color(0xFF061425))){ items(activity.voicesList){ v-> Text(v.name.take(35), color=if(selectedVoice==v) Color.Cyan else Color.Gray, modifier=Modifier.padding(6.dp).clickable{ selectedVoice=v; activity.tts?.voice=v; activity.speak("Hola Oskar") }) } }
                         Text("Grave ${pitch}", color=Color.Gray); Slider(value=pitch, onValueChange={pitch=it}, valueRange=0.5f..2f)
                         Text("Vel ${rate}", color=Color.Gray); Slider(value=rate, onValueChange={rate=it}, valueRange=0.5f..1.8f)
-                        Button(onClick={activity.speak("Reactor al cien por cien")}, modifier=Modifier.fillMaxWidth()){ Text("PROBAR VOZ") }
                     } else if(settingsPage==1){
-                        Text("Cerebro:", color=Color.White)
                         models.forEach{ m-> Card(Modifier.fillMaxWidth().padding(4.dp).clickable{modelName=m}, colors=CardDefaults.cardColors(containerColor=if(modelName==m) Color(0xFF004466) else Color(0xFF101828))){ Row(Modifier.padding(10.dp)){ RadioButton(selected=modelName==m, onClick={modelName=m}); Text(m, color=Color.White) } } }
                     } else {
-                        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("Hey Jarvis", color=Color.White); Switch(checked=heyEnabled, onCheckedChange={heyEnabled=it}) }
+                        Text("COMANDOS QUE YA HACE:", color=Color.White)
+                        Spacer(Modifier.height(8.dp))
+                        Text("• 'Enciende linterna' / 'Apaga linterna'\n• 'Abre YouTube'\n• 'Abre WhatsApp'\n• 'Abre Instagram / Spotify'\n• 'Abre cámara'\n• 'Qué hora es'\n• 'Hey Jarvis' para despertar", color=Color.Gray)
+                        Spacer(Modifier.height(10.dp))
+                        Text("PRÓXIMO: Tiempo real Vitoria + noticias + brillo pantalla", color=Color(0xFF00FFFF))
                         Button(onClick={activity.stop()}, colors=ButtonDefaults.buttonColors(containerColor=Color.Red), modifier=Modifier.fillMaxWidth().padding(top=10.dp)){ Text("PARAR VOZ") }
                     }
                 }
