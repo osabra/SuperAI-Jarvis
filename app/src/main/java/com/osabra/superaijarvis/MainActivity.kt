@@ -179,7 +179,7 @@ fun JarvisV11() {
         loading=true
         scope.launch{
             try{
-                val model = GenerativeModel("gemini-1.5-flash", key)
+                val model = GenerativeModel("gemini-2.0-flash", key)
                 val r = model.generateContent("Eres JARVIS de Tony Stark, voz grave robot, español corto, hablas con Oskar: $p")
                 val ans = r.text ?: "Sin datos"
                 output=ans; history=history+ChatMsg("JARVIS", ans); activity.speak(ans)
