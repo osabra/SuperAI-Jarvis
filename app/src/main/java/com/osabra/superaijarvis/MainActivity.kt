@@ -174,18 +174,32 @@ fun JarvisV11() {
             if(p.lowercase().contains(" en ")) city = p.lowercase().substringAfter(" en ").replace("?","").trim()
             loading = true; scope.launch{ val res = getWeatherV11(city); output=">>> CLIMA: $res"; history=history+ChatMsg("JARVIS", res); activity.speak(res); loading=false; input="" }; return
         }
+
         val key = getApiKey()
         if(key.isBlank()){ output="Falta API KEY"; activity.speak("Falta clave"); input=""; return }
         loading=true
         scope.launch{
-            try{
-                val model = GenerativeModel("gemini-2.0-flash", key)
-                val r = model.generateContent("Eres JARVIS de Tony Stark, voz grave robot, español corto, hablas con Oskar: $p")
-                val ans = r.text ?: "Sin datos"
-                output=ans; history=history+ChatMsg("JARVIS", ans); activity.speak(ans)
-            }catch(e: Exception){ output="Error IA ${e.message}" }
+            var success = false
+            val modelsToTry = listOf("gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-pro", "gemini-3.6-flash")
+            for(modelName in modelsToTry){
+                try{
+                    val model = GenerativeModel(modelName, key)
+                    val r = model.generateContent("Eres JARVIS de Tony Stark, voz grave robot, español corto, hablas con Oskar: $p")
+                    val ans = r.text ?: "Sin datos"
+                    output=ans; history=history+ChatMsg("JARVIS [$modelName]", ans); activity.speak(ans)
+                    success = true
+                    break
+                }catch(e: Exception){
+                    val msg = e.message ?: ""
+                    if(modelName == modelsToTry.last()){
+                        output="Error IA final: $msg"; activity.speak("Error IA")
+                    }
+                    continue
+                }
+            }
             loading=false; input=""
         }
+
     }
 
     val speechLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { res -> val txt = res.data?.getStringArrayListExtra(RecognizerIntent.EXTRA_RESULTS)?.get(0); if(!txt.isNullOrEmpty()) send(txt) }
