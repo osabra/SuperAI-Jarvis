@@ -59,23 +59,70 @@ data class Particle(var x: Float, var y: Float, var vx: Float, var vy: Float)
 
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="reactor")
-    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(if(isLoading) 900 else 3500, easing = LinearEasing)), label="r1")
-    val pulse by inf.animateFloat(1f, if(isListening) 1.08f else 1.03f, infiniteRepeatable(tween(if(isListening) 500 else 2500, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="p")
+    val inf = rememberInfiniteTransition(label="reactor3D")
+    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(if(isLoading) 800 else 4000, easing = LinearEasing)), label="r")
+    val rot2 by inf.animateFloat(360f, 0f, infiniteRepeatable(tween(if(isLoading) 1200 else 6000, easing = LinearEasing)), label="r2")
+    val pulse by inf.animateFloat(1f, if(isListening) 1.12f else 1.04f, infiniteRepeatable(tween(if(isListening) 400 else 2000, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
     var smoothRms by remember { mutableStateOf(0f) }
-    LaunchedEffect(rms){ smoothRms = (smoothRms*0.8f + rms*0.2f).coerceIn(0f,5f) }
-    Canvas(Modifier.size(200.dp)) {
-        val c = center; val base = size.minDimension/2.2f
+    LaunchedEffect(rms){ smoothRms = (smoothRms*0.85f + rms*0.15f).coerceIn(0f,6f) }
+
+    Canvas(Modifier.size(220.dp)) {
+        val c = center
+        val base = size.minDimension/2.15f
         val col = when { isListening -> Color(0xFF00FF88); isLoading -> Color(0xFFFFAA00); else -> Color(0xFF00E5FF) }
-        val p = pulse + (if(isListening) smoothRms*0.02f else 0f)
-        drawCircle(col.copy(alpha=if(isListening) 0.15f else 0.06f), radius=base*p*1.25f, center=c)
-        drawCircle(Color(0xFF0A2A4A), radius=base, center=c, style=Stroke(10f))
-        drawCircle(col.copy(alpha=0.9f), radius=base, center=c, style=Stroke(2.5f))
-        rotate(rot) { for(i in 0..3){ rotate(i*90f){ drawArc(col.copy(alpha=0.9f), 15f, 30f, false, topLeft=Offset(c.x-base*0.7f, c.y-base*0.7f), size=Size(base*1.4f, base*1.4f), style=Stroke(3f)) } } }
-        drawCircle(Color(0xFF001E38), radius=base*0.45f, center=c); drawCircle(Color.White, radius=base*0.18f*p, center=c)
+        val p = pulse + smoothRms*0.015f
+
+        // === SOMBRA 3D ===
+        drawCircle(Color.Black.copy(alpha=0.6f), radius=base*1.35f, center=Offset(c.x+12f, c.y+12f))
+        
+        // === BASE METALICA OSCURA CON PROFUNDIDAD ===
+        // Anillo exterior biselado
+        drawCircle(Brush.radialGradient(listOf(Color(0xFF1A3A5A), Color(0xFF0A1A2A), Color(0xFF000810)), center=c, radius=base*1.3f), radius=base*1.3f, center=c)
+        drawCircle(Brush.linearGradient(listOf(Color.White.copy(alpha=0.3f), Color.Transparent, Color.Black.copy(alpha=0.4f))), radius=base*1.3f, center=c, style=Stroke(3f))
+
+        // Halo exterior volumétrico
+        drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.25f), col.copy(alpha=0.05f), Color.Transparent), center=c, radius=base*1.5f), radius=base*1.5f*p, center=c)
+
+        // === ANILLO PRINCIPAL 3D ===
+        // Fondo profundo
+        drawCircle(Color(0xFF001428), radius=base, center=c, style=Stroke(18f))
+        // Borde brillante interior
+        drawCircle(col, radius=base, center=c, style=Stroke(2.5f))
+        // Brillo superior bisel
+        drawArc(Brush.linearGradient(listOf(Color.White.copy(alpha=0.6f), Color.Transparent)), 200f, 100f, false, topLeft=Offset(c.x-base, c.y-base), size=Size(base*2, base*2), style=Stroke(4f))
+
+        // === 4 SEGMENTOS GIRATORIOS CON PROFUNDIDAD ===
+        rotate(rot) {
+            for(i in 0..3){
+                rotate(i*90f){
+                    // Sombra del segmento
+                    drawArc(Color.Black.copy(alpha=0.5f), 15f, 30f, false, topLeft=Offset(c.x-base*0.7f+2, c.y-base*0.7f+2), size=Size(base*1.4f, base*1.4f), style=Stroke(5f))
+                    // Segmento principal
+                    drawArc(Brush.linearGradient(listOf(col, col.copy(alpha=0.4f))), 15f, 30f, false, topLeft=Offset(c.x-base*0.7f, c.y-base*0.7f), size=Size(base*1.4f, base*1.4f), style=Stroke(3.5f))
+                }
+            }
+        }
+        rotate(rot2) {
+            // Anillo interior secundario
+            drawCircle(Color(0xFF003355), radius=base*0.72f, center=c, style=Stroke(8f))
+            drawCircle(col.copy(alpha=0.5f), radius=base*0.72f, center=c, style=Stroke(1f))
+        }
+
+        // === NUCLEO 3D CRISTAL ===
+        // Capa profunda
+        drawCircle(Brush.radialGradient(listOf(Color(0xFF002A5A), Color(0xFF00152A)), center=c, radius=base*0.5f), radius=base*0.5f, center=c)
+        // Cristal central con gradiente
+        drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFF88E5FF), col, Color(0xFF001E38)), center=Offset(c.x-base*0.1f, c.y-base*0.1f), radius=base*0.45f), radius=base*0.45f*p, center=c)
+        // Punto de luz especular (efecto vidrio 3D)
+        drawCircle(Color.White.copy(alpha=0.9f), radius=base*0.12f*p, center=Offset(c.x-base*0.15f, c.y-base*0.15f))
+        drawCircle(Color.White.copy(alpha=0.4f), radius=base*0.06f*p, center=Offset(c.x-base*0.12f, c.y-base*0.12f))
+
+        // === ANILLO DE ENERGIA PULSANTE ===
+        if(isListening){
+            drawCircle(col.copy(alpha=0.15f + smoothRms*0.05f), radius=base*0.65f, center=c, style=Stroke(2f + smoothRms*0.8f))
+        }
     }
 }
-
 suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
     try {
         val clean = city.replace(" ","%20")
