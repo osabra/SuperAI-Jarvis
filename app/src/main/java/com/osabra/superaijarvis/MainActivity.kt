@@ -22,6 +22,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -35,6 +36,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -84,7 +86,7 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
         Canvas(Modifier.size(300.dp)) {
             drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.3f), Color.Transparent), center=center, radius=size.minDimension/2), radius=size.minDimension/2, center=center)
         }
-        androidx.compose.foundation.Image(
+        Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
             contentDescription = null,
             modifier = Modifier.size(240.dp)
