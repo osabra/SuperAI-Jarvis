@@ -79,32 +79,114 @@ fun ParticlesBg() {
 
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="reactorGOD")
-    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(3000, easing = LinearEasing)), label="r")
-    val pulse by inf.animateFloat(0.9f, 1.15f, infiniteRepeatable(tween(600, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="p")
-    val plasma by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(1200, easing = LinearEasing)), label="plasma")
+    val inf = rememberInfiniteTransition(label="reactorBRUTAL")
+    val rot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(8000, easing = LinearEasing)), label="r1")
+    val rot2 by inf.animateFloat(360f, 0f, infiniteRepeatable(tween(6000, easing = LinearEasing)), label="r2")
+    val pulse by inf.animateFloat(0.95f, 1.18f, infiniteRepeatable(tween(700, easing = FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
+    val plasmaRot by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(1500, easing = LinearEasing)), label="plasma")
     var smoothRms by remember { mutableStateOf(0f) }
-    LaunchedEffect(rms){ smoothRms = (smoothRms*0.8f + rms*0.2f).coerceIn(0f,8f) }
-    Canvas(Modifier.size(240.dp)) {
+    LaunchedEffect(rms){ smoothRms = (smoothRms*0.85f + rms*0.15f).coerceIn(0f, 8f) }
+
+    Canvas(Modifier.size(260.dp)) {
         val c = center
-        val base = size.minDimension/2.2f
-        val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-        val p = pulse + smoothRms*0.02f
-        drawCircle(Color.Black.copy(alpha=0.7f), radius=base*1.4f, center=Offset(c.x+14f, c.y+14f))
-        drawCircle(Brush.radialGradient(listOf(Color(0xFF3A4A5A), Color(0xFF1A2A3A), Color(0xFF050A10)), center=c, radius=base*1.4f), radius=base*1.4f, center=c)
-        rotate(rot){ for(i in 0..8){ rotate(i*45f){ drawArc(Color(0xFF00FF88).copy(alpha=0.15f), 5f, 12f, false, Offset(c.x-base*1.15f, c.y-base*1.15f), Size(base*2.3f, base*2.3f), style=Stroke(1.5f)) } } }
-        drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.3f), Color.Transparent), center=c, radius=base*1.6f), radius=base*1.6f*p, center=c)
-        drawCircle(Color(0xFF001428), radius=base, center=c, style=Stroke(20f))
-        drawCircle(Brush.linearGradient(listOf(Color.White.copy(alpha=0.5f), Color.Transparent, Color.Black.copy(alpha=0.6f))), radius=base, center=c, style=Stroke(3f))
-        rotate(plasma){
-            val path = androidx.compose.ui.graphics.Path().apply{
-                for(i in 0..6){ val ang = Math.toRadians((i*60+15).toDouble()); val x = c.x + kotlin.math.cos(ang)*base*0.65f*p; val y = c.y + kotlin.math.sin(ang)*base*0.65f*p; if(i==0) moveTo(x.toFloat(), y.toFloat()) else lineTo(x.toFloat(), y.toFloat()) }; close()
+        val base = size.minDimension/2.25f
+        val col = when { isListening -> Color(0xFF00FF88); isLoading -> Color(0xFFFFAA00); else -> Color(0xFF00E5FF) }
+        val p = pulse + smoothRms*0.025f
+
+        // 1. SOMBRA VOLUMÉTRICA PROFUNDA
+        drawCircle(Color.Black.copy(alpha=0.8f), radius=base*1.45f, center=Offset(c.x+16f, c.y+16f))
+
+        // 2. CHASIS EXTERIOR INDUSTRIAL (como la foto - metal oscuro con tornillos)
+        drawCircle(Brush.radialGradient(listOf(Color(0xFF4A5A6A), Color(0xFF2A3A4A), Color(0xFF101820)), center=c, radius=base*1.45f), radius=base*1.45f, center=c)
+        // Anillo exterior biselado con desgaste
+        drawCircle(Color(0xFF0A0F18), radius=base*1.38f, center=c, style=Stroke(22f))
+        drawCircle(Brush.linearGradient(listOf(Color.White.copy(alpha=0.35f), Color.Transparent, Color.Black.copy(alpha=0.5f))), radius=base*1.38f, center=c, style=Stroke(2.5f))
+
+        // 3. ANILLOS TÉCNICOS GIRATORIOS (como en la foto con HUDs)
+        rotate(rot) {
+            for(i in 0..7){
+                rotate(i*45f){
+                    // Segmentos técnicos con glow verde
+                    drawArc(col.copy(alpha=0.25f), 8f, 18f, false, Offset(c.x-base*1.2f, c.y-base*1.2f), Size(base*2.4f, base*2.4f), style=Stroke(2.5f))
+                    drawArc(Color(0xFF1A2A3A), 10f, 14f, false, Offset(c.x-base*1.2f, c.y-base*1.2f), Size(base*2.4f, base*2.4f), style=Stroke(6f))
+                }
             }
-            drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.4f), col.copy(alpha=0.2f))))
-            drawPath(path, Color.White.copy(alpha=0.2f), style=Stroke(2f))
         }
-        drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFF88FFE5), Color(0xFF00FF88).copy(alpha=0.8f), Color(0xFF004422)), center=Offset(c.x-10f, c.y-10f), radius=base*0.55f), radius=base*0.55f*p, center=c)
-        drawCircle(Color.White.copy(alpha=0.95f), radius=base*0.14f, center=Offset(c.x-base*0.12f, c.y-base*0.15f))
+
+        // 4. HALO DE ENERGÍA VOLUMÉTRICO
+        drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.35f), col.copy(alpha=0.1f), Color.Transparent), center=c, radius=base*1.7f), radius=base*1.7f*p, center=c)
+
+        // 5. ANILLO PRINCIPAL INTERIOR PROFUNDO
+        drawCircle(Color(0xFF00101E), radius=base*0.98f, center=c, style=Stroke(16f))
+        drawCircle(col.copy(alpha=0.9f), radius=base*0.98f, center=c, style=Stroke(1.8f))
+        // Brillo bisel superior
+        drawArc(Brush.linearGradient(listOf(Color.White.copy(alpha=0.5f), Color.Transparent)), 220f, 80f, false, Offset(c.x-base*0.98f, c.y-base*0.98f), Size(base*1.96f, base*1.96f), style=Stroke(3f))
+
+        // 6. SEGUNDO ANILLO INTERIOR CONTRAROTATORIO
+        rotate(rot2){
+            drawCircle(Color(0xFF0A2A3A), radius=base*0.78f, center=c, style=Stroke(10f))
+            drawCircle(col.copy(alpha=0.4f), radius=base*0.78f, center=c, style=Stroke(1f))
+            for(i in 0..3){ rotate(i*90f){ drawCircle(col.copy(alpha=0.6f), radius=3f, center=Offset(c.x, c.y-base*0.78f)) } }
+        }
+
+        // 7. CRISTAL HEXAGONAL FACETADO (IGUAL QUE LA FOTO)
+        rotate(plasmaRot*0.3f){
+            val hexPath = androidx.compose.ui.graphics.Path().apply{
+                for(i in 0..5){
+                    val ang = Math.toRadians((i*60).toDouble())
+                    val r = base*0.68f*p
+                    val x = c.x + kotlin.math.cos(ang)*r
+                    val y = c.y + kotlin.math.sin(ang)*r
+                    if(i==0) moveTo(x.toFloat(), y.toFloat()) else lineTo(x.toFloat(), y.toFloat())
+                }
+                close()
+            }
+            // Sombra cristal
+            val shadowPath = androidx.compose.ui.graphics.Path().apply{
+                for(i in 0..5){
+                    val ang = Math.toRadians((i*60).toDouble())
+                    val r = base*0.68f*p
+                    val x = c.x+3 + kotlin.math.cos(ang)*r
+                    val y = c.y+3 + kotlin.math.sin(ang)*r
+                    if(i==0) moveTo(x.toFloat(), y.toFloat()) else lineTo(x.toFloat(), y.toFloat())
+                }
+                close()
+            }
+            drawPath(shadowPath, Color.Black.copy(alpha=0.5f))
+            // Cristal con gradiente facetado
+            drawPath(hexPath, Brush.linearGradient(listOf(Color.White.copy(alpha=0.25f), Color(0xFF88FFE5).copy(alpha=0.3f), col.copy(alpha=0.15f)), start=Offset(c.x-base*0.5f, c.y-base*0.5f), end=Offset(c.x+base*0.5f, c.y+base*0.5f)))
+            drawPath(hexPath, Color.White.copy(alpha=0.35f), style=Stroke(2.2f))
+            // Facetas interiores
+            for(i in 0..5){
+                val ang = Math.toRadians((i*60).toDouble())
+                val x = c.x + kotlin.math.cos(ang)*base*0.68f*p
+                val y = c.y + kotlin.math.sin(ang)*base*0.68f*p
+                drawLine(Color.White.copy(alpha=0.15f), c, Offset(x.toFloat(), y.toFloat()), 1f)
+            }
+        }
+
+        // 8. PLASMA INTERIOR BRUTAL (núcleo de energía como la foto)
+        rotate(plasmaRot){
+            drawCircle(Brush.radialGradient(listOf(Color.White, Color(0xFF88FFE5), Color(0xFF00E5FF), Color(0xFF00FF88), Color(0xFF004422)), center=Offset(c.x-8f, c.y-8f), radius=base*0.55f), radius=base*0.55f*p, center=c)
+            // Remolinos de plasma
+            for(i in 0..2){
+                rotate(i*120f){
+                    drawArc(Color.White.copy(alpha=0.4f), 0f, 90f, false, Offset(c.x-base*0.35f, c.y-base*0.35f), Size(base*0.7f, base*0.7f), style=Stroke(1.5f))
+                }
+            }
+        }
+
+        // 9. NÚCLEO CENTRAL HIPER BRILLANTE
+        drawCircle(Brush.radialGradient(listOf(Color.White, Color.White.copy(alpha=0.8f), Color.Transparent), center=c, radius=base*0.12f), radius=base*0.12f*p, center=c)
+        
+        // 10. REFLEJO ESPECULAR CRISTAL (efecto vidrio 3D de la foto)
+        drawCircle(Color.White.copy(alpha=0.95f), radius=base*0.11f, center=Offset(c.x-base*0.18f, c.y-base*0.2f))
+        drawCircle(Color.White.copy(alpha=0.5f), radius=base*0.05f, center=Offset(c.x-base*0.15f, c.y-base*0.18f))
+
+        // 11. ANILLO ENERGÍA AL HABLAR
+        if(isListening){
+            drawCircle(col.copy(alpha=0.2f + smoothRms*0.08f), radius=base*0.88f, center=c, style=Stroke(2.5f + smoothRms*1.2f))
+        }
     }
 }
 
