@@ -38,8 +38,8 @@ import java.util.*
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     var tts: TextToSpeech? = null
     var voicesList by mutableStateOf<List<Voice>>(emptyList())
-    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV63() } }
-    override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) { tts?.language = Locale("es","ES"); voicesList = tts?.voices?.filter { it.locale.language == "es" || it.name.contains("es", true) }?.sortedBy { it.name } ?: emptyList() } }
+    override fun onCreate(savedInstanceState: Bundle?) { super.onCreate(savedInstanceState); tts = TextToSpeech(this, this); setContent { JarvisV64() } }
+    override fun onInit(status: Int) { if (status == TextToSpeech.SUCCESS) { tts?.language = Locale("es","ES"); voicesList = tts?.voices?.filter { it.locale.language == "es" }?.sortedBy { it.name } ?: emptyList() } }
     fun speak(t: String) { tts?.speak(t, TextToSpeech.QUEUE_FLUSH, null, null) }
     fun stop() { tts?.stop() }
     override fun onDestroy() { tts?.stop(); tts?.shutdown(); super.onDestroy() }
@@ -62,14 +62,14 @@ fun ReactorCore(isSpeaking: Boolean, isListening: Boolean) {
 }
 
 @Composable
-fun JarvisV63() {
+fun JarvisV64() {
     val context = LocalContext.current; val activity = context as MainActivity
-    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V6.3 FIX ONLINE. Ahora con Gemini 1.5 - Di Hey Jarvis") }
+    var inputText by remember { mutableStateOf("") }; var responseText by remember { mutableStateOf("V6.4 FIX STYLE OK. Usa 1.5-flash") }
     var modelName by remember { mutableStateOf("gemini-1.5-flash") }; var isLoading by remember { mutableStateOf(false) }; var isSpeaking by remember { mutableStateOf(false) }
     var isListeningWake by remember { mutableStateOf(false) }; var heyEnabled by remember { mutableStateOf(true) }; var history by remember { mutableStateOf(listOf<ChatMsg>()) }
     var pitch by remember { mutableStateOf(0.75f) }; var rate by remember { mutableStateOf(0.95f) }; var selectedVoice by remember { mutableStateOf<Voice?>(null) }
     var showSettings by remember { mutableStateOf(false) }; var settingsPage by remember { mutableStateOf(0) }
-    val models = listOf("gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-2.0-flash", "gemini-2.0-flash-exp")
+    val models = listOf("gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-2.0-flash")
     val scope = rememberCoroutineScope(); val apiKey = BuildConfig.GEMINI_API_KEY
     var speechRecognizer by remember { mutableStateOf<SpeechRecognizer?>(null) }
 
@@ -79,15 +79,15 @@ fun JarvisV63() {
         isLoading = true; isSpeaking = true
         scope.launch {
             var success = false; var lastError = ""
-            val tryModels = listOf(modelName, "gemini-1.5-flash", "gemini-1.5-flash-001", "gemini-2.0-flash").distinct()
+            val tryModels = listOf(modelName, "gemini-1.5-flash", "gemini-1.5-flash-001").distinct()
             for(mId in tryModels){
                 try{
                     activity.tts?.let{ t-> selectedVoice?.let{ t.voice=it }; t.setPitch(pitch); t.setSpeechRate(rate) }
                     val m = GenerativeModel(mId, apiKey)
-                    val r = m.generateContent("Eres JARVIS de Oskar en Vitoria-Gasteiz, responde corto, util y en español. Hoy es ${Date()}: $p")
+                    val r = m.generateContent("Eres JARVIS de Oskar, responde corto en español: $p")
                     val ans = r.text ?: "Sin datos"
-                    responseText = ans; history = history + ChatMsg("JARVIS ($mId)", ans); modelName = mId; activity.speak(ans); success = true; break
-                }catch(e:Exception){ lastError = e.message ?: "desconocido"; }
+                    responseText = ans; history = history + ChatMsg("JARVIS", ans); modelName = mId; activity.speak(ans); success = true; break
+                }catch(e:Exception){ lastError = e.message ?: "error"; }
             }
             if(!success) responseText = "FALLO: $lastError"
             isLoading = false; inputText = ""
@@ -100,7 +100,7 @@ fun JarvisV63() {
         override fun onRmsChanged(r: Float){}; override fun onBufferReceived(b: ByteArray?){}
         override fun onEndOfSpeech(){ isListeningWake=false; if(heyEnabled) startWake() }
         override fun onError(e: Int){ isListeningWake=false; if(heyEnabled) android.os.Handler(android.os.Looper.getMainLooper()).postDelayed({startWake()},800) }
-        override fun onResults(res: Bundle?){ val txt=res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")){ responseText="Sí Oskar, te escucho"; activity.speak("Sí Oskar, te escucho"); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }else if(heyEnabled) startWake(); isListeningWake=false }
+        override fun onResults(res: Bundle?){ val txt=res?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")){ responseText="Si Oskar, te escucho"; activity.speak("Si Oskar, te escucho"); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }else if(heyEnabled) startWake(); isListeningWake=false }
         override fun onPartialResults(p: Bundle?){ val txt=p?.getStringArrayList(SpeechRecognizer.RESULTS_RECOGNITION)?.firstOrNull()?.lowercase()?:""; if(txt.contains("jarvis")) rec.stopListening() }
         override fun onEvent(t:Int,p:Bundle?){}
     }); val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES"); putExtra(RecognizerIntent.EXTRA_PARTIAL_RESULTS, true) }; rec.startListening(it) }
@@ -110,6 +110,35 @@ fun JarvisV63() {
 
     Box(Modifier.fillMaxSize().background(Color(0xFF01050A)).padding(10.dp)){
         Column(Modifier.fillMaxSize(), horizontalAlignment=Alignment.CenterHorizontally){
-            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("JARVIS V6.3", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("☰ AJUSTES") } }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("JARVIS V6.4", color=Color.Cyan); Button(onClick={showSettings=true}){ Text("AJUSTES") } }
             ReactorCore(isSpeaking, isListeningWake)
-            Text(if(isListeningWake) "● HEY JARVIS ESCUCHANDO..." else if(isLoading) "● PROCESANDO..." else "● STANDBY", color=if(isListeningWake) Color(0xFF00FF88) else Color.Gray, style
+            Text(if(isListeningWake) "HEY JARVIS ESCUCHANDO..." else if(isLoading) "PROCESANDO..." else "STANDBY", color=if(isListeningWake) Color(0xFF00FF88) else Color.Gray)
+            Card(Modifier.fillMaxWidth(), colors=CardDefaults.cardColors(containerColor=Color(0xFF0D1B2A))){ Text(responseText, color=Color(0xFFCCFFFF), modifier=Modifier.padding(10.dp)) }
+            LazyColumn(Modifier.weight(1f).fillMaxWidth().background(Color(0xFF060E1E)).padding(6.dp), reverseLayout=true){ items(history.reversed()){ msg-> Text(msg.role + ": " + msg.text, color=if(msg.role=="TÚ") Color.Gray else Color(0xFF00FFFF)) } }
+            Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(8.dp)){ OutlinedTextField(value=inputText, onValueChange={inputText=it}, label={Text("Orden...")}, modifier=Modifier.weight(1f), colors=OutlinedTextFieldDefaults.colors(focusedTextColor=Color.White, unfocusedTextColor=Color.White, focusedBorderColor=Color.Cyan)); Button(onClick={ val it=Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }){ Text("MIC") } }
+            Button(onClick={sendAuto(inputText)}, modifier=Modifier.fillMaxWidth(), enabled=!isLoading, colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF00FFFF), contentColor=Color.Black)){ Text("ENVIAR") }
+        }
+        if(showSettings){
+            Card(Modifier.fillMaxSize().padding(10.dp), colors=CardDefaults.cardColors(containerColor=Color(0xFF0A1E2F))){
+                Column(Modifier.padding(12.dp).fillMaxSize()){
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween){ Text("AJUSTES V6.4", color=Color.Cyan); Button(onClick={showSettings=false}){ Text("X") } }
+                    Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.spacedBy(6.dp)){ Button(onClick={settingsPage=0}){ Text("VOZ") }; Button(onClick={settingsPage=1}){ Text("GOOGLE") }; Button(onClick={settingsPage=2}){ Text("HEY") } }
+                    Spacer(Modifier.height(10.dp))
+                    if(settingsPage==0){
+                        Text("Voz: ${selectedVoice?.name?.take(25)?: "Defecto"}", color=Color.White)
+                        LazyColumn(Modifier.height(140.dp).background(Color(0xFF061425))){ items(activity.voicesList){ v-> Text(v.name.take(35), color=if(selectedVoice==v) Color.Cyan else Color.Gray, modifier=Modifier.padding(6.dp).clickable{ selectedVoice=v; activity.tts?.voice=v; activity.speak("Hola Oskar") }) } }
+                        Text("Grave ${pitch}", color=Color.Gray); Slider(value=pitch, onValueChange={pitch=it}, valueRange=0.5f..2f)
+                        Text("Vel ${rate}", color=Color.Gray); Slider(value=rate, onValueChange={rate=it}, valueRange=0.5f..1.8f)
+                        Button(onClick={activity.speak("Reactor al cien por cien")}, modifier=Modifier.fillMaxWidth()){ Text("PROBAR VOZ") }
+                    } else if(settingsPage==1){
+                        Text("Cerebro:", color=Color.White)
+                        models.forEach{ m-> Card(Modifier.fillMaxWidth().padding(4.dp).clickable{modelName=m}, colors=CardDefaults.cardColors(containerColor=if(modelName==m) Color(0xFF004466) else Color(0xFF101828))){ Row(Modifier.padding(10.dp)){ RadioButton(selected=modelName==m, onClick={modelName=m}); Text(m, color=Color.White) } } }
+                    } else {
+                        Row(Modifier.fillMaxWidth(), horizontalArrangement=Arrangement.SpaceBetween, verticalAlignment=Alignment.CenterVertically){ Text("Hey Jarvis", color=Color.White); Switch(checked=heyEnabled, onCheckedChange={heyEnabled=it}) }
+                        Button(onClick={activity.stop()}, colors=ButtonDefaults.buttonColors(containerColor=Color.Red), modifier=Modifier.fillMaxWidth().padding(top=10.dp)){ Text("PARAR VOZ") }
+                    }
+                }
+            }
+        }
+    }
+}
