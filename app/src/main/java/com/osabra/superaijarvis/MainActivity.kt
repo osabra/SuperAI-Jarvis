@@ -78,6 +78,7 @@ fun ParticlesBg() {
 
 
 
+
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     val inf = rememberInfiniteTransition(label="reactorPRO")
@@ -88,32 +89,28 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     LaunchedEffect(rms){ smoothRms = (smoothRms*0.82f + rms*0.18f).coerceIn(0f, 10f) }
 
     Box(Modifier.size(280.dp), contentAlignment = Alignment.Center) {
-        // Glow exterior brutal
-        Canvas(Modifier.size(300.dp).graphicsLayer{ scaleX = pulse + smoothRms*0.015f; scaleY = pulse + smoothRms*0.015f; alpha = glowAlpha }) {
+        Canvas(Modifier.size(300.dp)) {
             val c = center
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.5f), col.copy(alpha=0.15f), Color.Transparent), center=c, radius=size.minDimension/2), radius=size.minDimension/2, center=c)
+            val s = (pulse + smoothRms*0.015f)
+            val radius = size.minDimension/2 * s * glowAlpha
+            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.5f), col.copy(alpha=0.15f), Color.Transparent), center=c, radius=radius), radius=radius, center=c)
         }
-        // Reactor imagen PRO - 4K
         androidx.compose.foundation.Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
             contentDescription = "Reactor Brutal PRO",
-            modifier = Modifier
-                .size(240.dp)
-                .graphicsLayer {
-                    rotationZ = rot * 0.15f
-                    scaleX = pulse + smoothRms*0.008f
-                    scaleY = pulse + smoothRms*0.008f
-                    // Sombra 3D pro
-                    shadowElevation = 40f
-                }
+            modifier = Modifier.size(240.dp).graphicsLayer {
+                rotationZ = rot * 0.15f
+                val sc = pulse + smoothRms*0.008f
+                scaleX = sc
+                scaleY = sc
+            }
         )
-        // Núcleo plasma extra encima para más brillo
-        Canvas(Modifier.size(90.dp).graphicsLayer{ scaleX = pulse; scaleY = pulse }) {
+        Canvas(Modifier.size(90.dp)) {
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF88FFE5)
-            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f), radius=size.minDimension/2.2f, center=center)
+            val s = pulse
+            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f*s), radius=size.minDimension/2.2f*s, center=center)
         }
-        // Anillo de voz
         if(isListening){
             Canvas(Modifier.size(260.dp)){
                 val col = Color(0xFF00FF88)
@@ -122,6 +119,7 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
         }
     }
 }
+
 
 
 
