@@ -79,6 +79,7 @@ fun ParticlesBg() {
 
 
 
+
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     val inf = rememberInfiniteTransition(label="reactorPRO")
@@ -96,20 +97,15 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
             val radius = size.minDimension/2 * s * glowAlpha
             drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.5f), col.copy(alpha=0.15f), Color.Transparent), center=c, radius=radius), radius=radius, center=c)
         }
+        val sc = pulse + smoothRms*0.008f
         androidx.compose.foundation.Image(
             painter = painterResource(id = R.drawable.reactor_brutal),
             contentDescription = "Reactor Brutal PRO",
-            modifier = Modifier.size(240.dp).graphicsLayer {
-                rotationZ = rot * 0.15f
-                val sc = pulse + smoothRms*0.008f
-                scaleX = sc
-                scaleY = sc
-            }
+            modifier = Modifier.size(240.dp).scale(sc).rotate(rot * 0.15f)
         )
-        Canvas(Modifier.size(90.dp)) {
+        Canvas(Modifier.size(90.dp).scale(pulse)) {
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF88FFE5)
-            val s = pulse
-            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f*s), radius=size.minDimension/2.2f*s, center=center)
+            drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=center, radius=size.minDimension/2.2f), radius=size.minDimension/2.2f, center=center)
         }
         if(isListening){
             Canvas(Modifier.size(260.dp)){
@@ -119,6 +115,7 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
         }
     }
 }
+
 
 
 
