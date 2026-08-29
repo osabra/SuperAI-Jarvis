@@ -1,35 +1,57 @@
 package com.osabra.superaijarvis
 
-
+import android.Manifest
+import android.content.Context
+import android.content.Intent
+import android.content.pm.PackageManager
+import android.hardware.camera2.CameraManager
+import android.net.Uri
+import android.os.Build
+import android.os.Bundle
+import android.provider.AlarmClock
+import android.provider.Settings
+import android.speech.RecognitionListener
+import android.speech.RecognizerIntent
+import android.speech.SpeechRecognizer
+import android.speech.tts.TextToSpeech
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.compose.setContent
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.unit.dp
-import androidx.compose.animation.core.*
-import androidx.compose.material3.Text
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.font.FontWeight
-import kotlin.math.PI
-import kotlin.math.cos
-import kotlin.math.sin
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.setValue
-
-
-
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.content.ContextCompat
+import com.google.ai.client.generativeai.GenerativeModel
+import kotlinx.coroutines.*
+import java.net.URL
+import java.text.SimpleDateFormat
+import java.util.*
+import org.json.JSONObject
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity(), TextToSpeech.OnInitListener {
     var tts: TextToSpeech? = null
@@ -138,7 +160,7 @@ fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offs
     }
     path.close()
     drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.9f), color.copy(alpha=0.6f), color.copy(alpha=0.3f)), start=Offset(center.x-size, center.y-size), end=Offset(center.x+size, center.y+size)))
-    drawPath(path, color.copy(alpha=0.25f), style=Stroke(width=1.5f))
+    drawPath(path, color.copy(alpha=0.25f), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5f))
     val innerPath = Path()
     for(i in 0 until points){
         val ang = (i*60f + rot + 15f) * Math.PI/180.0 - Math.PI/6
@@ -305,96 +327,4 @@ fun JarvisV11() {
             }
         }
     }
-}
-
-
-
-@Composable
-fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="brutal3D")
-    val rotY by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(18000, easing=LinearEasing)), label="rotY")
-    val rotX by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(22000, easing=LinearEasing)), label="rotX")
-    val pulse by inf.animateFloat(0.9f, 1.15f, infiniteRepeatable(tween(800, easing=FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
-    var smoothRms by remember { mutableStateOf(0f) }
-    LaunchedEffect(rms){ smoothRms = (smoothRms*0.75f + rms*0.25f).coerceIn(0f, 10f) }
-
-    Box(Modifier.size(360.dp).graphicsLayer {
-        rotationY = rotY * 0.15f
-        rotationX = rotX * 0.08f
-        scaleX = pulse * (1f + smoothRms*0.03f)
-        scaleY = pulse * (1f + smoothRms*0.03f)
-    }, contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val c = center
-            val baseR = size.minDimension * 0.42f
-            val listeningBoost = if(isListening) 1f + smoothRms*0.05f else 1f
-            val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-            val col2 = if(isListening) Color(0xFF00FFAA) else Color(0xFF00FFFF)
-            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.35f*listeningBoost), col.copy(alpha=0.08f), Color.Transparent), center=c, radius=baseR*1.6f), radius=baseR*1.6f, center=c)
-            draw3DRing(c, baseR*0.98f, 20f, rotY, col, 0.95f, 0f, 0f)
-            draw3DRing(c, baseR*0.84f, 17f, -rotY*0.8f, col2, 0.85f, 78f, 0f)
-            draw3DRing(c, baseR*0.70f, 14f, rotX, Color(0xFF88FFCC), 0.75f, 35f, 45f)
-            draw3DRing(c, baseR*0.54f, 11f, -rotX*1.3f, Color.White, 0.55f, 0f, -30f)
-            val crystalSize = baseR*0.33f * pulse * listeningBoost
-            drawHexCrystal(c, crystalSize, rotY*0.4f, col, pulse, isListening)
-            val plasmaR = crystalSize*0.46f * pulse
-            drawCircle(Brush.radialGradient(listOf(Color.White, col, col2.copy(alpha=0.6f), Color.Transparent), center=c, radius=plasmaR), radius=plasmaR, center=c)
-            for(i in 0..5){
-                val ang = (rotY + i*60f) * PI/180f
-                val len = crystalSize*1.9f
-                val x1 = c.x + cos(ang).toFloat() * crystalSize*0.5f
-                val y1 = c.y + sin(ang).toFloat() * crystalSize*0.5f
-                val x2 = c.x + cos(ang).toFloat() * len
-                val y2 = c.y + sin(ang).toFloat() * len
-                drawLine(col.copy(alpha=0.28f + smoothRms*0.06f), Offset(x1,y1), Offset(x2,y2), strokeWidth=1.6f + smoothRms*0.4f, cap=StrokeCap.Round)
-            }
-        }
-    }
-}
-
-fun DrawScope.draw3DRing(center: Offset, radius: Float, stroke: Float, rotation: Float, color: Color, alpha: Float, tiltX: Float, tiltY: Float){
-    val segments = 64
-    for(i in 0 until segments){
-        val a1 = (i*360f/segments + rotation) * Math.PI/180.0
-        val a2 = ((i+1)*360f/segments + rotation) * Math.PI/180.0
-        val yTilt = kotlin.math.cos(Math.toRadians(tiltX.toDouble())).toFloat()
-        val xTilt = kotlin.math.cos(Math.toRadians(tiltY.toDouble())).toFloat()
-        val x1 = center.x + kotlin.math.cos(a1).toFloat()*radius*xTilt
-        val y1 = center.y + kotlin.math.sin(a1).toFloat()*radius*yTilt
-        val x2 = center.x + kotlin.math.cos(a2).toFloat()*radius*xTilt
-        val y2 = center.y + kotlin.math.sin(a2).toFloat()*radius*yTilt
-        val depth = (kotlin.math.sin(a1).toFloat()*0.5f + 0.5f)
-        val a = alpha*(0.25f + depth*0.75f)
-        if(a>0.08f){
-            drawLine(color.copy(alpha=a), Offset(x1,y1), Offset(x2,y2), strokeWidth=stroke, cap=StrokeCap.Round)
-            if(i % 14 == 0){
-                drawCircle(color.copy(alpha=a*0.9f), radius=stroke*0.65f, center=Offset(x1,y1))
-            }
-        }
-    }
-}
-
-fun DrawScope.drawHexCrystal(center: Offset, size: Float, rot: Float, color: Color, pulse: Float, isListening: Boolean){
-    val points = 6
-    val path = Path()
-    for(i in 0 until points){
-        val ang = (i*60f + rot) * PI/180f - PI/6
-        val r = size * (if(i%2==0) 1f else 0.88f)
-        val x = center.x + cos(ang).toFloat()*r
-        val y = center.y + sin(ang).toFloat()*r*0.92f
-        if(i==0) path.moveTo(x,y) else path.lineTo(x,y)
-    }
-    path.close()
-    drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.92f), color.copy(alpha=0.62f), color.copy(alpha=0.32f)), start=Offset(center.x-size, center.y-size), end=Offset(center.x+size, center.y+size)))
-    drawPath(path, color.copy(alpha=0.28f), style=Stroke(width=1.6f))
-    val innerPath = Path()
-    for(i in 0 until points){
-        val ang = (i*60f + rot + 15f) * PI/180f - PI/6
-        val r = size*0.56f*pulse
-        val x = center.x + cos(ang).toFloat()*r
-        val y = center.y + sin(ang).toFloat()*r*0.92f
-        if(i==0) innerPath.moveTo(x,y) else innerPath.lineTo(x,y)
-    }
-    innerPath.close()
-    drawPath(innerPath, Brush.radialGradient(listOf(Color.White, color.copy(alpha=0.52f), Color.Transparent), center=center, radius=size*0.52f))
 }
