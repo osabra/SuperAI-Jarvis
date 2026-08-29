@@ -37,9 +37,7 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontFamily
@@ -162,7 +160,7 @@ fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offs
     }
     path.close()
     drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.9f), color.copy(alpha=0.6f), color.copy(alpha=0.3f)), start=Offset(center.x-size, center.y-size), end=Offset(center.x+size, center.y+size)))
-    drawPath(path, color.copy(alpha=0.25f), style=Stroke(width=1.5f))
+    drawPath(path, color.copy(alpha=0.25f), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5f))
     val innerPath = Path()
     for(i in 0 until points){
         val ang = (i*60f + rot + 15f) * Math.PI/180.0 - Math.PI/6
