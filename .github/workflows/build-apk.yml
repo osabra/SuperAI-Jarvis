@@ -1,6 +1,8 @@
 name: Build Jarvis APK
+
 on:
   workflow_dispatch:
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -14,13 +16,16 @@ jobs:
       - uses: gradle/actions/setup-gradle@v4
         with:
           gradle-version: 8.5
+
       - name: Build APK
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
         run: |
           echo "sdk.dir=$ANDROID_HOME" > local.properties
+          echo "GEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}" >> local.properties
           gradle :app:assembleDebug --no-daemon -PGEMINI_API_KEY=${{ secrets.GEMINI_API_KEY }}
+
       - uses: actions/upload-artifact@v4
         with:
-          name: Jarvis-APK-LISTA
+          name: Jarvis-APK
           path: app/build/outputs/apk/debug/app-debug.apk
