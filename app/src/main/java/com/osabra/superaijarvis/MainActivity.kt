@@ -1,3 +1,5 @@
+package com.osabra.superaijarvis
+
 import io.github.sceneview.node.ModelNode
 import io.github.sceneview.math.Position
 
