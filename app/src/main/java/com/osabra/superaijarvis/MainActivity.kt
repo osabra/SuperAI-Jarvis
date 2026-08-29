@@ -8,6 +8,17 @@ import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+
+import android.hardware.Sensor
+import android.hardware.SensorEvent
+import android.hardware.SensorEventListener
+import android.hardware.SensorManager
+import android.location.Location
+import android.content.Context
+import com.google.android.gms.location.LocationServices
+import com.google.android.gms.location.Priority
+import kotlin.math.*
+
 import android.provider.AlarmClock
 import android.provider.Settings
 import android.speech.RecognitionListener
@@ -165,7 +176,71 @@ fun JarvisV11() {
     val context = LocalContext.current; val activity = context as MainActivity
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("STARK OS V11.12 PRO VERDE GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
+    
     var history by remember { mutableStateOf(listOf<ChatMsg>()) }
+    // TRAJE HUD STATES
+    var pitch by remember { mutableStateOf(0f) }
+    var roll by remember { mutableStateOf(0f) }
+    var yaw by remember { mutableStateOf(0f) }
+    var speedKmh by remember { mutableStateOf(0f) }
+    var altitude by remember { mutableStateOf(0f) }
+    var lightLux by remember { mutableStateOf(100f) }
+    var batteryPct by remember { mutableStateOf(100) }
+    val context = LocalContext.current
+    // Sensor manager
+    LaunchedEffect(Unit) {
+        val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
+        val accel = sm.getDefaultSensor(Sensor.TYPE_ACCELEROMETER)
+        val magnet = sm.getDefaultSensor(Sensor.TYPE_MAGNETIC_FIELD)
+        val light = sm.getDefaultSensor(Sensor.TYPE_LIGHT)
+        val gravityVals = FloatArray(3)
+        val magVals = FloatArray(3)
+        val listener = object : SensorEventListener {
+            var grav = FloatArray(3)
+            var mag = FloatArray(3)
+            override fun onSensorChanged(e: SensorEvent) {
+                when(e.sensor.type){
+                    Sensor.TYPE_ACCELEROMETER -> grav = e.values.clone()
+                    Sensor.TYPE_MAGNETIC_FIELD -> mag = e.values.clone()
+                    Sensor.TYPE_LIGHT -> lightLux = e.values[0]
+                }
+                if(grav.isNotEmpty() && mag.isNotEmpty()){
+                    val R = FloatArray(9)
+                    val I = FloatArray(9)
+                    if(SensorManager.getRotationMatrix(R,I,grav,mag)){
+                        val orient = FloatArray(3)
+                        SensorManager.getOrientation(R, orient)
+                        yaw = Math.toDegrees(orient[0].toDouble()).toFloat()
+                        pitch = Math.toDegrees(orient[1].toDouble()).toFloat()
+                        roll = Math.toDegrees(orient[2].toDouble()).toFloat()
+                    }
+                }
+            }
+            override fun onAccuracyChanged(s: Sensor?, a: Int) {}
+        }
+        sm.registerListener(listener, accel, SensorManager.SENSOR_DELAY_GAME)
+        sm.registerListener(listener, magnet, SensorManager.SENSOR_DELAY_GAME)
+        sm.registerListener(listener, light, SensorManager.SENSOR_DELAY_UI)
+    }
+    // GPS speed
+    LaunchedEffect(Unit) {
+        try {
+            val fused = LocationServices.getFusedLocationProviderClient(context)
+            // Simple polling
+            while(true){
+                try {
+                    fused.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { loc: Location? ->
+                        loc?.let {
+                            speedKmh = it.speed * 3.6f
+                            altitude = it.altitude.toFloat()
+                        }
+                    }
+                } catch(_: Exception){}
+                kotlinx.coroutines.delay(1500)
+            }
+        } catch(_: Exception){}
+    }
+
     var listening by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
     var heyOn by remember { mutableStateOf(true) }
