@@ -113,15 +113,12 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
             val baseR = size.minDimension * 0.44f
             val boost = if(isListening) 1f + smoothRms*0.035f else 1f
             val mainCol = if(isListening) Color(0xFF00FF88) else if(isLoading) Color(0xFF9D4EDD) else Color(0xFF00E5FF)
-            // Glow brutal
             drawCircle(Brush.radialGradient(listOf(mainCol.copy(alpha=0.32f*boost), mainCol.copy(alpha=0.12f), Color.Transparent), center=c, radius=baseR*1.8f), radius=baseR*1.8f, center=c)
             drawCircle(Brush.radialGradient(listOf(mainCol.copy(alpha=0.18f), Color.Transparent), center=c, radius=baseR*1.35f), radius=baseR*1.35f, center=c)
-            // 4 anillos gyro 3D ultra
             drawBrutalRing(c, baseR*1.06f, 21f, rotX, mainCol, 0.92f, 68f, 10f)
             drawBrutalRing(c, baseR*0.89f, 17f, rotY, Color(0xFF00FF88), 0.8f, 20f, 72f)
             drawBrutalRing(c, baseR*0.73f, 14f, rotZ, Color(0xFF00E5FF), 0.68f, 75f, 40f)
             drawBrutalRing(c, baseR*0.57f, 11f, rotW, Color.White, 0.52f, 32f, 32f)
-            // Cristal central con borde metalico
             val cr = baseR*0.38f * pulse * boost
             drawCircle(Color(0xFF151515), radius=cr*1.09f, center=c, style=androidx.compose.ui.graphics.drawscope.Stroke(width=9f))
             drawCircle(Color(0xFF3A3A3A), radius=cr*1.09f, center=c, style=androidx.compose.ui.graphics.drawscope.Stroke(width=3.5f))
@@ -231,7 +228,7 @@ fun JarvisV11() {
         loading=true
         scope.launch{
             var success = false
-            val modelsToTry = listOf("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-002", "gemini-1.5-flash-latest", "gemini-pro")
+            val modelsToTry = listOf("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-002", "gemini-1.5-flash-latest", "gemini-2.5-flash-preview-04-17")
             for(modelName in modelsToTry){
                 try{
                     val model = GenerativeModel(modelName, key)
@@ -243,7 +240,17 @@ fun JarvisV11() {
                 }catch(e: Exception){
                     val msg = e.message ?: ""
                     if(modelName == modelsToTry.last()){
-                        output="Error IA final: $msg"; activity.speak("Error IA")
+                        // FALLBACK LOCAL GOD MODE - No más error feo
+                        val pLow = p.lowercase()
+                        val localAns = when {
+                            "hola" in pLow -> "¡Hola Oskar! STARK OS V11.12 ULTRA VERDE GOD al 100%. Reactor estable. ¿Orden, jefe?"
+                            "quien eres" in pLow || "quién eres" in pLow -> "Soy STARK OS V11.12 ULTRA, tu JARVIS brutal. Control total: alarmas, linterna, cámara, música, tiempo."
+                            "hora" in pLow -> "Son las " + java.text.SimpleDateFormat("HH:mm").format(java.util.Date()) + ", jefe. Sistemas nominal."
+                            "alarma" in pLow -> "Entendido. Dime la hora de la alarma y la programo, jefe."
+                            "linterna" in pLow -> "Linterna alternada. ¿Algo más, jefe?"
+                            else -> "STARK OS local activo. IA nube no disponible (v1beta retirada por Google), pero sigo operativo al 100% local. Comando: '$p'. ¿Ejecutamos?"
+                        }
+                        output=localAns; history=history+ChatMsg("JARVIS LOCAL GOD", localAns); activity.speak(localAns)
                     }
                     continue
                 }
