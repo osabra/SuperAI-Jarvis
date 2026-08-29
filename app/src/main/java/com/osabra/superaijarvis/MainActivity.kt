@@ -22,7 +22,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -36,7 +35,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Brush
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.rotate
@@ -80,23 +78,6 @@ fun ParticlesBg() {
 
 
 
-package com.osabra.superaijarvis
-
-import android.os.Bundle
-import androidx.activity.ComponentActivity
-import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.Canvas
-import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.*
-import androidx.compose.ui.graphics.drawscope.*
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.Alignment
-import androidx.compose.animation.core.*
-import kotlin.math.*
-
 @Composable
 fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
     val inf = rememberInfiniteTransition(label="brutal3D")
@@ -117,56 +98,48 @@ fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
             val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
             val col2 = if(isListening) Color(0xFF00FFAA) else Color(0xFF00FFFF)
 
-            // Glow externo brutal
             drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.35f*listeningBoost), col.copy(alpha=0.08f), Color.Transparent), center=c, radius=baseR*1.5f), radius=baseR*1.5f, center=c)
 
-            // ANILLO 1 - Horizontal (X)
-            draw3DRing(c, baseR*0.95f, 18f, rotX, col, 0.9f)
-            // ANILLO 2 - Vertical inclinado (Y) 
-            draw3DRing(c, baseR*0.82f, 16f, rotY, col2, 0.8f, tiltX = 75f)
-            // ANILLO 3 - Diagonal (Z) - más rápido
-            draw3DRing(c, baseR*0.68f, 14f, rotZ, Color(0xFF88FFAA), 0.7f, tiltX = 35f, tiltY = 45f)
-            // ANILLO 4 - Interno contrarrotación
-            draw3DRing(c, baseR*0.52f, 10f, -rotX*1.5f, Color.White, 0.5f, tiltY = -30f)
+            // 4 anillos 3D gyroscopicos
+            drawBrutalRing(c, baseR*0.95f, 18f, rotX, col, 0.9f, 0f, 0f)
+            drawBrutalRing(c, baseR*0.82f, 16f, rotY, col2, 0.8f, 75f, 0f)
+            drawBrutalRing(c, baseR*0.68f, 14f, rotZ, Color(0xFF88FFAA), 0.7f, 35f, 45f)
+            drawBrutalRing(c, baseR*0.52f, 10f, -rotX*1.5f, Color.White, 0.5f, 0f, -30f)
 
-            // Cristal hexagonal central 3D
+            // Cristal hexagonal central
             val crystalSize = baseR*0.32f * pulse * listeningBoost
-            drawHexCrystal(c, crystalSize, rotZ*0.3f, col, corePulse, isListening)
+            drawHexCrystal(c, crystalSize, rotZ*0.3f, col, corePulse)
 
-            // Núcleo plasma brutal
+            // Nucleo plasma
             val plasmaR = crystalSize*0.45f * corePulse
             drawCircle(Brush.radialGradient(listOf(Color.White, col, col2.copy(alpha=0.6f), Color.Transparent), center=c, radius=plasmaR), radius=plasmaR, center=c)
-            // Rayos de energía
             for(i in 0..5){
-                val ang = (rotZ + i*60f) * PI/180f
+                val ang = (rotZ + i*60f) * Math.PI/180.0
                 val len = crystalSize*1.8f
-                val x1 = c.x + cos(ang).toFloat() * crystalSize*0.5f
-                val y1 = c.y + sin(ang).toFloat() * crystalSize*0.5f
-                val x2 = c.x + cos(ang).toFloat() * len
-                val y2 = c.y + sin(ang).toFloat() * len
+                val x1 = c.x + kotlin.math.cos(ang).toFloat() * crystalSize*0.5f
+                val y1 = c.y + kotlin.math.sin(ang).toFloat() * crystalSize*0.5f
+                val x2 = c.x + kotlin.math.cos(ang).toFloat() * len
+                val y2 = c.y + kotlin.math.sin(ang).toFloat() * len
                 drawLine(col.copy(alpha=0.25f + smoothRms*0.05f), Offset(x1,y1), Offset(x2,y2), strokeWidth=1.5f + smoothRms*0.3f, cap=StrokeCap.Round)
             }
         }
     }
 }
 
-fun DrawScope.draw3DRing(center: Offset, radius: Float, stroke: Float, rotation: Float, color: Color, alpha: Float, tiltX: Float = 0f, tiltY: Float = 0f){
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBrutalRing(center: Offset, radius: Float, stroke: Float, rotation: Float, color: Color, alpha: Float, tiltX: Float, tiltY: Float){
     val segments = 60
     for(i in 0 until segments){
-        val a1 = (i*360f/segments + rotation) * PI/180f
-        val a2 = ((i+1)*360f/segments + rotation) * PI/180f
-        // Simulación 3D con inclinación
-        val yTilt = cos(Math.toRadians(tiltX.toDouble())).toFloat()
-        val x1 = center.x + cos(a1).toFloat()*radius
-        val y1 = center.y + sin(a1).toFloat()*radius*yTilt
-        val x2 = center.x + cos(a2).toFloat()*radius
-        val y2 = center.y + sin(a2).toFloat()*radius*yTilt
-        // Profundidad: más claro delante, oscuro detrás
-        val depth = (sin(a1).toFloat()*0.5f + 0.5f)
+        val a1 = (i*360f/segments + rotation) * Math.PI/180.0
+        val a2 = ((i+1)*360f/segments + rotation) * Math.PI/180.0
+        val yTilt = kotlin.math.cos(Math.toRadians(tiltX.toDouble())).toFloat()
+        val x1 = center.x + kotlin.math.cos(a1).toFloat()*radius
+        val y1 = center.y + kotlin.math.sin(a1).toFloat()*radius*yTilt
+        val x2 = center.x + kotlin.math.cos(a2).toFloat()*radius
+        val y2 = center.y + kotlin.math.sin(a2).toFloat()*radius*yTilt
+        val depth = (kotlin.math.sin(a1).toFloat()*0.5f + 0.5f)
         val a = alpha*(0.3f + depth*0.7f)
         if(a>0.1f){
             drawLine(color.copy(alpha=a), Offset(x1,y1), Offset(x2,y2), strokeWidth=stroke, cap=StrokeCap.Round)
-            // Tornillos / detalles cada 90°
             if(i % 15 == 0){
                 drawCircle(color.copy(alpha=a), radius=stroke*0.6f, center=Offset(x1,y1))
             }
@@ -174,27 +147,25 @@ fun DrawScope.draw3DRing(center: Offset, radius: Float, stroke: Float, rotation:
     }
 }
 
-fun DrawScope.drawHexCrystal(center: Offset, size: Float, rot: Float, color: Color, pulse: Float, isListening: Boolean){
+fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offset, size: Float, rot: Float, color: Color, pulse: Float){
     val points = 6
     val path = Path()
     for(i in 0 until points){
-        val ang = (i*60f + rot) * PI/180f - PI/6
+        val ang = (i*60f + rot) * Math.PI/180.0 - Math.PI/6
         val r = size * (if(i%2==0) 1f else 0.88f)
-        val x = center.x + cos(ang).toFloat()*r
-        val y = center.y + sin(ang).toFloat()*r*0.92f // perspectiva
+        val x = center.x + kotlin.math.cos(ang).toFloat()*r
+        val y = center.y + kotlin.math.sin(ang).toFloat()*r*0.92f
         if(i==0) path.moveTo(x,y) else path.lineTo(x,y)
     }
     path.close()
-    // Cristal con gradiente 3D
     drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.9f), color.copy(alpha=0.6f), color.copy(alpha=0.3f)), start=Offset(center.x-size, center.y-size), end=Offset(center.x+size, center.y+size)))
     drawPath(path, color.copy(alpha=0.25f), style=Stroke(width=1.5f))
-    // Brillo interior
     val innerPath = Path()
     for(i in 0 until points){
-        val ang = (i*60f + rot + 15f) * PI/180f - PI/6
+        val ang = (i*60f + rot + 15f) * Math.PI/180.0 - Math.PI/6
         val r = size*0.55f*pulse
-        val x = center.x + cos(ang).toFloat()*r
-        val y = center.y + sin(ang).toFloat()*r*0.92f
+        val x = center.x + kotlin.math.cos(ang).toFloat()*r
+        val y = center.y + kotlin.math.sin(ang).toFloat()*r*0.92f
         if(i==0) innerPath.moveTo(x,y) else innerPath.lineTo(x,y)
     }
     innerPath.close()
