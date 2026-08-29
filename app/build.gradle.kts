@@ -40,7 +40,5 @@ dependencies {
     implementation("androidx.core:core-ktx:1.12.0")
     implementation("com.google.ai.client.generativeai:generativeai:0.5.0")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
-    implementacion("io.github.sceneview:sceneview:2.3.0")
-    implementacion("com.google.android.filament-android:1.55.0")
 
 }
