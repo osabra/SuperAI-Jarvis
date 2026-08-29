@@ -1,4 +1,5 @@
-package com.osabra.superaijarvis
+import io.github.sceneview.node.ModelNode
+import io.github.sceneview.math.Position
 
 import android.Manifest
 import android.content.Context
@@ -79,114 +80,6 @@ fun ParticlesBg() {
 
 
 
-@Composable
-fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
-    val inf = rememberInfiniteTransition(label="brutal3D")
-    val rotX by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(8000, easing=LinearEasing)), label="rx")
-    val rotY by inf.animateFloat(0f, -360f, infiniteRepeatable(tween(12000, easing=LinearEasing)), label="ry")
-    val rotZ by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(6000, easing=LinearEasing)), label="rz")
-    val pulse by inf.animateFloat(0.88f, 1.15f, infiniteRepeatable(tween(900, easing=FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
-    val corePulse by inf.animateFloat(0.7f, 1.3f, infiniteRepeatable(tween(400, easing=FastOutSlowInEasing), RepeatMode.Reverse), label="core")
-    
-    var smoothRms by remember { mutableStateOf(0f) }
-    LaunchedEffect(rms){ smoothRms = (smoothRms*0.75f + rms*0.25f).coerceIn(0f, 10f) }
-
-    Box(Modifier.size(340.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val c = center
-            val baseR = size.minDimension * 0.42f
-            val listeningBoost = if(isListening) 1f + smoothRms*0.04f else 1f
-            val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
-            val col2 = if(isListening) Color(0xFF00FFAA) else Color(0xFF00FFFF)
-
-            drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.35f*listeningBoost), col.copy(alpha=0.08f), Color.Transparent), center=c, radius=baseR*1.5f), radius=baseR*1.5f, center=c)
-
-            // 4 anillos 3D gyroscopicos
-            drawBrutalRing(c, baseR*0.95f, 18f, rotX, col, 0.9f, 0f, 0f)
-            drawBrutalRing(c, baseR*0.82f, 16f, rotY, col2, 0.8f, 75f, 0f)
-            drawBrutalRing(c, baseR*0.68f, 14f, rotZ, Color(0xFF88FFAA), 0.7f, 35f, 45f)
-            drawBrutalRing(c, baseR*0.52f, 10f, -rotX*1.5f, Color.White, 0.5f, 0f, -30f)
-
-            // Cristal hexagonal central
-            val crystalSize = baseR*0.32f * pulse * listeningBoost
-            drawHexCrystal(c, crystalSize, rotZ*0.3f, col, corePulse)
-
-            // Nucleo plasma
-            val plasmaR = crystalSize*0.45f * corePulse
-            drawCircle(Brush.radialGradient(listOf(Color.White, col, col2.copy(alpha=0.6f), Color.Transparent), center=c, radius=plasmaR), radius=plasmaR, center=c)
-            for(i in 0..5){
-                val ang = (rotZ + i*60f) * Math.PI/180.0
-                val len = crystalSize*1.8f
-                val x1 = c.x + kotlin.math.cos(ang).toFloat() * crystalSize*0.5f
-                val y1 = c.y + kotlin.math.sin(ang).toFloat() * crystalSize*0.5f
-                val x2 = c.x + kotlin.math.cos(ang).toFloat() * len
-                val y2 = c.y + kotlin.math.sin(ang).toFloat() * len
-                drawLine(col.copy(alpha=0.25f + smoothRms*0.05f), Offset(x1,y1), Offset(x2,y2), strokeWidth=1.5f + smoothRms*0.3f, cap=StrokeCap.Round)
-            }
-        }
-    }
-}
-
-fun androidx.compose.ui.graphics.drawscope.DrawScope.drawBrutalRing(center: Offset, radius: Float, stroke: Float, rotation: Float, color: Color, alpha: Float, tiltX: Float, tiltY: Float){
-    val segments = 60
-    for(i in 0 until segments){
-        val a1 = (i*360f/segments + rotation) * Math.PI/180.0
-        val a2 = ((i+1)*360f/segments + rotation) * Math.PI/180.0
-        val yTilt = kotlin.math.cos(Math.toRadians(tiltX.toDouble())).toFloat()
-        val x1 = center.x + kotlin.math.cos(a1).toFloat()*radius
-        val y1 = center.y + kotlin.math.sin(a1).toFloat()*radius*yTilt
-        val x2 = center.x + kotlin.math.cos(a2).toFloat()*radius
-        val y2 = center.y + kotlin.math.sin(a2).toFloat()*radius*yTilt
-        val depth = (kotlin.math.sin(a1).toFloat()*0.5f + 0.5f)
-        val a = alpha*(0.3f + depth*0.7f)
-        if(a>0.1f){
-            drawLine(color.copy(alpha=a), Offset(x1,y1), Offset(x2,y2), strokeWidth=stroke, cap=StrokeCap.Round)
-            if(i % 15 == 0){
-                drawCircle(color.copy(alpha=a), radius=stroke*0.6f, center=Offset(x1,y1))
-            }
-        }
-    }
-}
-
-fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offset, size: Float, rot: Float, color: Color, pulse: Float){
-    val points = 6
-    val path = Path()
-    for(i in 0 until points){
-        val ang = (i*60f + rot) * Math.PI/180.0 - Math.PI/6
-        val r = size * (if(i%2==0) 1f else 0.88f)
-        val x = center.x + kotlin.math.cos(ang).toFloat()*r
-        val y = center.y + kotlin.math.sin(ang).toFloat()*r*0.92f
-        if(i==0) path.moveTo(x,y) else path.lineTo(x,y)
-    }
-    path.close()
-    drawPath(path, Brush.linearGradient(listOf(Color.White.copy(alpha=0.9f), color.copy(alpha=0.6f), color.copy(alpha=0.3f)), start=Offset(center.x-size, center.y-size), end=Offset(center.x+size, center.y+size)))
-    drawPath(path, color.copy(alpha=0.25f), style=androidx.compose.ui.graphics.drawscope.Stroke(width=1.5f))
-    val innerPath = Path()
-    for(i in 0 until points){
-        val ang = (i*60f + rot + 15f) * Math.PI/180.0 - Math.PI/6
-        val r = size*0.55f*pulse
-        val x = center.x + kotlin.math.cos(ang).toFloat()*r
-        val y = center.y + kotlin.math.sin(ang).toFloat()*r*0.92f
-        if(i==0) innerPath.moveTo(x,y) else innerPath.lineTo(x,y)
-    }
-    innerPath.close()
-    drawPath(innerPath, Brush.radialGradient(listOf(Color.White, color.copy(alpha=0.5f), Color.Transparent), center=center, radius=size*0.5f))
-}
-
-
-
-suspend fun getWeatherV11(city: String): String = withContext(Dispatchers.IO) {
-    try {
-        val clean = city.replace(" ","%20")
-        val geo = JSONObject(URL("https://geocoding-api.open-meteo.com/v1/search?name=$clean&count=1&language=es").readText())
-        if(!geo.has("results")) return@withContext "No encuentro $city"
-        val f = geo.getJSONArray("results").getJSONObject(0)
-        val lat = f.getDouble("latitude"); val lon = f.getDouble("longitude"); val name = f.getString("name"); val country = f.optString("country","")
-        val w = JSONObject(URL("https://api.open-meteo.com/v1/forecast?latitude=$lat&longitude=$lon&current_weather=true").readText()).getJSONObject("current_weather")
-        val temp = w.getDouble("temperature")
-        "$name $country: ${temp}°C"
-    } catch(e: Exception) { "Error clima $city" }
-}
 
 @Composable
 fun JarvisV11() {
@@ -325,6 +218,86 @@ fun JarvisV11() {
                 Button(onClick={ val it = Intent(RecognizerIntent.ACTION_RECOGNIZE_SPEECH).apply{ putExtra(RecognizerIntent.EXTRA_LANGUAGE_MODEL, RecognizerIntent.LANGUAGE_MODEL_FREE_FORM); putExtra(RecognizerIntent.EXTRA_LANGUAGE, "es-ES") }; speechLauncher.launch(it) }, shape=CircleShape, modifier=Modifier.size(48.dp), contentPadding=PaddingValues(0.dp), colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF6C5CE7))){ Text("🎙") }
                 Button(onClick={send(input)}, shape=CircleShape, modifier=Modifier.size(48.dp), colors=ButtonDefaults.buttonColors(containerColor=Color(0xFF00FFFF)), contentPadding=PaddingValues(0.dp)){ Text("➤", color=Color.Black, fontWeight=FontWeight.Bold) }
             }
+        }
+    }
+}
+
+
+
+@Composable
+fun ReactorV11(isListening: Boolean, isLoading: Boolean, rms: Float) {
+    // V13 NIVEL DIOS - 3D REAL .GLB + FALLBACK BRUTAL
+    var smoothRms by remember { mutableStateOf(0f) }
+    LaunchedEffect(rms){ smoothRms = (smoothRms*0.75f + rms*0.25f).coerceIn(0f, 10f) }
+    
+    val inf = rememberInfiniteTransition(label="v13")
+    val rotY by inf.animateFloat(0f, 360f, infiniteRepeatable(tween(18000, easing=LinearEasing)), label="rotY")
+    val pulse by inf.animateFloat(0.9f, 1.18f, infiniteRepeatable(tween(850, easing=FastOutSlowInEasing), RepeatMode.Reverse), label="pulse")
+
+    Box(Modifier.size(380.dp), contentAlignment = Alignment.Center) {
+        // INTENTA CARGAR MODELO 3D REAL - SI NO ESTÁ, FALLBACK CANVAS BRUTAL
+        try {
+            // --- 3D REAL CON SCENEVIEW ---
+            io.github.sceneview.Scene(
+                modifier = Modifier.fillMaxSize().graphicsLayer {
+                    scaleX = pulse * (1f + smoothRms*0.02f)
+                    scaleY = pulse * (1f + smoothRms*0.02f)
+                },
+                nodes = remember {
+                    listOf(
+                        io.github.sceneview.node.ModelNode(
+                            modelInstanceName = "reactor_brutal_3d.glb",
+                            scaleToUnits = 1.8f,
+                            centerOrigin = io.github.sceneview.math.Position(0f, 0f, 0f)
+                        )
+                    )
+                },
+                onFrame = { _ -> }
+            )
+        } catch (e: Exception) {
+            // FALLBACK BRUTAL SI NO TIENE EL .GLB
+            Canvas(Modifier.fillMaxSize().graphicsLayer {
+                rotationY = rotY * 0.12f
+                scaleX = pulse
+                scaleY = pulse
+            }) {
+                val c = center
+                val baseR = size.minDimension * 0.44f
+                val col = if(isListening) Color(0xFF00FF88) else Color(0xFF00E5FF)
+                drawCircle(Brush.radialGradient(listOf(col.copy(alpha=0.35f), Color.Transparent), center=c, radius=baseR*1.5f), radius=baseR*1.5f, center=c)
+                // Anillos fallback
+                for(i in 0..2){
+                    val r = baseR * (0.98f - i*0.15f)
+                    val stroke = 18f - i*4f
+                    drawCircle(col.copy(alpha=0.6f - i*0.15f), radius=r, center=c, style=Stroke(width=stroke))
+                }
+                val crystal = baseR*0.35f * pulse
+                drawCircle(Brush.radialGradient(listOf(Color.White, col, Color.Transparent), center=c, radius=crystal), radius=crystal, center=c)
+            }
+        }
+        
+        // Glow cuando escucha
+        if(isListening){
+            Box(Modifier.fillMaxSize().background(Brush.radialGradient(listOf(Color(0xFF00FF88).copy(alpha=0.15f + smoothRms*0.03f), Color.Transparent), center=androidx.compose.ui.graphics.Offset(0.5f,0.5f), radius=380f)))
+        }
+    }
+}
+
+fun DrawScope.draw3DRing(center: Offset, radius: Float, stroke: Float, rotation: Float, color: Color, alpha: Float, tiltX: Float, tiltY: Float){
+    val segments = 64
+    for(i in 0 until segments){
+        val a1 = (i*360f/segments + rotation) * Math.PI/180.0
+        val a2 = ((i+1)*360f/segments + rotation) * Math.PI/180.0
+        val yTilt = kotlin.math.cos(Math.toRadians(tiltX.toDouble())).toFloat()
+        val xTilt = kotlin.math.cos(Math.toRadians(tiltY.toDouble())).toFloat()
+        val x1 = center.x + kotlin.math.cos(a1).toFloat()*radius*xTilt
+        val y1 = center.y + kotlin.math.sin(a1).toFloat()*radius*yTilt
+        val x2 = center.x + kotlin.math.cos(a2).toFloat()*radius*xTilt
+        val y2 = center.y + kotlin.math.sin(a2).toFloat()*radius*yTilt
+        val depth = (kotlin.math.sin(a1).toFloat()*0.5f + 0.5f)
+        val a = alpha*(0.25f + depth*0.75f)
+        if(a>0.08f){
+            drawLine(color.copy(alpha=a), Offset(x1,y1), Offset(x2,y2), strokeWidth=stroke, cap=StrokeCap.Round)
         }
     }
 }
