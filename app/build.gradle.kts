@@ -14,7 +14,6 @@ android {
         versionCode = 16
         versionName = "16.0-ALEXA"
 
-        // API Keys desde local.properties o secrets
         val geminiKey = project.findProperty("GEMINI_API_KEY") as String? ?: System.getenv("GEMINI_API_KEY") ?: ""
         val amazonClientId = project.findProperty("AMAZON_CLIENT_ID") as String? ?: System.getenv("AMAZON_CLIENT_ID") ?: ""
         val amazonProductId = project.findProperty("AMAZON_PRODUCT_ID") as String? ?: "Jarvis"
@@ -29,7 +28,7 @@ android {
         buildConfig = true
     }
     composeOptions {
-        kotlinCompilerExtensionVersion = "1.5.14"
+        kotlinCompilerExtensionVersion = "1.5.11"
     }
     packaging {
         resources {
@@ -37,12 +36,8 @@ android {
         }
     }
     buildTypes {
-        release {
-            isMinifyEnabled = false
-        }
-        debug {
-            isMinifyEnabled = false
-        }
+        release { isMinifyEnabled = false }
+        debug { isMinifyEnabled = false }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -63,8 +58,6 @@ dependencies {
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3:1.2.1")
     implementation("androidx.browser:browser:1.8.0")
-    // Gemini
     implementation("com.google.ai.client.generativeai:generativeai:0.9.0")
-    // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3")
 }
