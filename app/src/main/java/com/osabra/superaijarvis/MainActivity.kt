@@ -1,23 +1,19 @@
 package com.osabra.superaijarvis
 
 import android.Manifest
-import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.hardware.camera2.CameraManager
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
-
 import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
-import android.location.Location
-import android.content.Context
-import com.google.android.gms.location.LocationServices
-import com.google.android.gms.location.Priority
-import kotlin.math.*
+import android.location.LocationManager
+import android.content.Context 
+
 
 import android.provider.AlarmClock
 import android.provider.Settings
@@ -173,7 +169,7 @@ fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offs
 
 @Composable
 fun JarvisV11() {
-    val context = LocalContext.current; val activity = context as MainActivity
+    val appContext = LocalContext.current; val activity = context as MainActivity
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("STARK OS V11.12 PRO VERDE GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
     
@@ -186,7 +182,6 @@ fun JarvisV11() {
     var altitude by remember { mutableStateOf(0f) }
     var lightLux by remember { mutableStateOf(100f) }
     var batteryPct by remember { mutableStateOf(100) }
-    val context = LocalContext.current
     // Sensor manager
     LaunchedEffect(Unit) {
         val sm = context.getSystemService(Context.SENSOR_SERVICE) as SensorManager
@@ -222,24 +217,24 @@ fun JarvisV11() {
         sm.registerListener(listener, magnet, SensorManager.SENSOR_DELAY_GAME)
         sm.registerListener(listener, light, SensorManager.SENSOR_DELAY_UI)
     }
-    // GPS speed
+
+    // GPS speed sin librería externa
     LaunchedEffect(Unit) {
         try {
-            val fused = LocationServices.getFusedLocationProviderClient(context)
-            // Simple polling
+            val lm = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             while(true){
                 try {
-                    fused.getCurrentLocation(Priority.PRIORITY_HIGH_ACCURACY, null).addOnSuccessListener { loc: Location? ->
-                        loc?.let {
-                            speedKmh = it.speed * 3.6f
-                            altitude = it.altitude.toFloat()
-                        }
+                    val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
+                    loc?.let {
+                        speedKmh = it.speed * 3.6f
+                        altitude = it.altitude.toFloat()
                     }
                 } catch(_: Exception){}
-                kotlinx.coroutines.delay(1500)
+                kotlinx.coroutines.delay(2000)
             }
         } catch(_: Exception){}
     }
+
 
     var listening by remember { mutableStateOf(false) }
     var loading by remember { mutableStateOf(false) }
