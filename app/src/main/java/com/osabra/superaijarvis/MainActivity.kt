@@ -174,6 +174,51 @@ fun JarvisV11() {
     var output by remember { mutableStateOf("STARK OS V11.12 PRO VERDE GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
     
     var history by remember { mutableStateOf(listOf<ChatMsg>()) }
+    var pitch by remember { mutableStateOf(0f) }
+    var roll by remember { mutableStateOf(0f) }
+    var yaw by remember { mutableStateOf(0f) }
+    var speedKmh by remember { mutableStateOf(0f) }
+    var altitude by remember { mutableStateOf(0f) }
+    var lightLux by remember { mutableStateOf(100f) }
+    LaunchedEffect(Unit) {
+        try {
+            val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager
+            val listener = object : android.hardware.SensorEventListener {
+                var grav = FloatArray(3); var mag = FloatArray(3)
+                override fun onSensorChanged(e: android.hardware.SensorEvent) {
+                    when(e.sensor.type){
+                        android.hardware.Sensor.TYPE_ACCELEROMETER -> grav = e.values.clone()
+                        android.hardware.Sensor.TYPE_MAGNETIC_FIELD -> mag = e.values.clone()
+                        android.hardware.Sensor.TYPE_LIGHT -> lightLux = e.values[0]
+                    }
+                    val R = FloatArray(9); val I = FloatArray(9)
+                    if(android.hardware.SensorManager.getRotationMatrix(R,I,grav,mag)){
+                        val orient = FloatArray(3)
+                        android.hardware.SensorManager.getOrientation(R, orient)
+                        yaw = Math.toDegrees(orient[0].toDouble()).toFloat()
+                        pitch = Math.toDegrees(orient[1].toDouble()).toFloat()
+                        roll = Math.toDegrees(orient[2].toDouble()).toFloat()
+                    }
+                }
+                override fun onAccuracyChanged(s: android.hardware.Sensor?, a: Int) {}
+            }
+            sm.registerListener(listener, sm.getDefaultSensor(android.hardware.Sensor.TYPE_ACCELEROMETER), android.hardware.SensorManager.SENSOR_DELAY_GAME)
+            sm.registerListener(listener, sm.getDefaultSensor(android.hardware.Sensor.TYPE_MAGNETIC_FIELD), android.hardware.SensorManager.SENSOR_DELAY_GAME)
+            sm.registerListener(listener, sm.getDefaultSensor(android.hardware.Sensor.TYPE_LIGHT), android.hardware.SensorManager.SENSOR_DELAY_UI)
+        } catch(_: Exception){}
+    }
+    LaunchedEffect(Unit) {
+        try {
+            val lm = context.getSystemService(android.content.Context.LOCATION_SERVICE) as android.location.LocationManager
+            while(true){
+                try {
+                    val loc = lm.getLastKnownLocation(android.location.LocationManager.GPS_PROVIDER) ?: lm.getLastKnownLocation(android.location.LocationManager.NETWORK_PROVIDER)
+                    loc?.let { speedKmh = it.speed * 3.6f; altitude = it.altitude.toFloat() }
+                } catch(_: Exception){}
+                kotlinx.coroutines.delay(2000)
+            }
+        } catch(_: Exception){}
+    }
     // TRAJE HUD STATES
     var pitch by remember { mutableStateOf(0f) }
     var roll by remember { mutableStateOf(0f) }
@@ -298,7 +343,7 @@ fun JarvisV11() {
         loading=true
         scope.launch{
             var success = false
-            val modelsToTry = listOf("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-002", "gemini-1.5-flash-latest", "gemini-2.5-flash-preview-04-17")
+            val modelsToTry = listOf("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-2.0-flash-002", "gemini-2.0-flash-latest", "gemini-2.5-flash-preview-04-17")
             for(modelName in modelsToTry){
                 try{
                     val model = GenerativeModel(modelName, key)
