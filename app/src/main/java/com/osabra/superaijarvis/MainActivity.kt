@@ -11,6 +11,9 @@ import android.hardware.Sensor
 import android.hardware.SensorEvent
 import android.hardware.SensorEventListener
 import android.hardware.SensorManager
+import androidx.browser.customtabs.CustomTabsIntent
+import android.content.Intent
+import android.net.Uri
 import android.location.LocationManager
 import android.content.Context 
 
@@ -180,6 +183,8 @@ fun JarvisV11() {
     var speedKmh by remember { mutableStateOf(0f) }
     var altitude by remember { mutableStateOf(0f) }
     var lightLux by remember { mutableStateOf(100f) }
+    var alexaToken by remember { mutableStateOf("") }
+    var alexaConnected by remember { mutableStateOf(false) }
     LaunchedEffect(Unit) {
         try {
             val sm = context.getSystemService(android.content.Context.SENSOR_SERVICE) as android.hardware.SensorManager
@@ -226,6 +231,8 @@ fun JarvisV11() {
     var speedKmh by remember { mutableStateOf(0f) }
     var altitude by remember { mutableStateOf(0f) }
     var lightLux by remember { mutableStateOf(100f) }
+    var alexaToken by remember { mutableStateOf("") }
+    var alexaConnected by remember { mutableStateOf(false) }
     var batteryPct by remember { mutableStateOf(100) }
     // Sensor manager
     LaunchedEffect(Unit) {
