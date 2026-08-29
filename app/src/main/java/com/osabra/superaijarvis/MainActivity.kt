@@ -169,7 +169,7 @@ fun androidx.compose.ui.graphics.drawscope.DrawScope.drawHexCrystal(center: Offs
 
 @Composable
 fun JarvisV11() {
-    val appContext = LocalContext.current; val activity = context as MainActivity
+    val context = LocalContext.current; val activity = context as MainActivity
     var input by remember { mutableStateOf("") }
     var output by remember { mutableStateOf("STARK OS V11.12 PRO VERDE GOD MODE\nVoz robot + Partículas + Control total\nDi: pon alarma 7:30") }
     
@@ -221,7 +221,7 @@ fun JarvisV11() {
     // GPS speed sin librería externa
     LaunchedEffect(Unit) {
         try {
-            val lm = appContext.getSystemService(Context.LOCATION_SERVICE) as LocationManager
+            val lm = context.getSystemService(Context.LOCATION_SERVICE) as LocationManager
             while(true){
                 try {
                     val loc = lm.getLastKnownLocation(LocationManager.GPS_PROVIDER) ?: lm.getLastKnownLocation(LocationManager.NETWORK_PROVIDER)
