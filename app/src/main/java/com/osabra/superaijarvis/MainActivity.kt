@@ -231,7 +231,7 @@ fun JarvisV11() {
         loading=true
         scope.launch{
             var success = false
-            val modelsToTry = listOf("gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-latest", "gemini-1.5-flash", "gemini-pro", "gemini-1.5-flash")
+            val modelsToTry = listOf("gemini-2.0-flash", "gemini-2.0-flash-lite", "gemini-1.5-flash-002", "gemini-1.5-flash-latest", "gemini-pro")
             for(modelName in modelsToTry){
                 try{
                     val model = GenerativeModel(modelName, key)
